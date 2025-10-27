@@ -38,7 +38,7 @@ func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
 	result, err := apiConfig.DB.GetResultBySession(r.Context(), sessionID)
 	resultFound := false
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if !(err == sql.ErrNoRows) {
 			//  lets handle error that's not empty row
 			msg := fmt.Sprintf("Error check result, err: %v", err)
 
