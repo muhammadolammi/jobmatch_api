@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/muhammadolammi/jobmatchapi/internal/database"
 )
 
@@ -34,17 +36,28 @@ func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	result, err := apiConfig.DB.GetResultBySession(r.Context(), sessionID)
+	resultFound := false
 	if err != nil {
-		msg := fmt.Sprintf("Error check result, err: %v", err)
-		log.Println(msg)
-		respondWithError(w, http.StatusInternalServerError, msg)
-		return
+		if err == sql.ErrNoRows {
+			//  lets handle error that's not empty row
+			msg := fmt.Sprintf("Error check result, err: %v", err)
+
+			log.Println(msg)
+			respondWithError(w, http.StatusInternalServerError, msg)
+			return
+		}
+
 	}
-	if time.Since(result.CreatedAt) < 24*time.Hour {
-		remaining := 24*time.Hour - time.Since(result.CreatedAt)
-		msg := fmt.Sprintf("try again after in %v Minutes", remaining.Minutes())
-		respondWithError(w, http.StatusInternalServerError, msg)
-		return
+	if result.ID != uuid.Nil {
+		resultFound = true
+	}
+	if resultFound {
+		if time.Since(result.CreatedAt) < 24*time.Hour {
+			remaining := 24*time.Hour - time.Since(result.CreatedAt)
+			msg := fmt.Sprintf("Please try again after in %v Minutes", remaining.Minutes())
+			respondWithError(w, http.StatusTooManyRequests, msg)
+			return
+		}
 	}
 	files := r.MultipartForm.File["file"]
 	if len(files) == 0 {
