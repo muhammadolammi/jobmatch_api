@@ -117,7 +117,7 @@ func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
 		SessionID: sessionID,
 	})
 	if err != nil {
-		msg := fmt.Sprintf("error uploading files. filename: %v, err: %v, moving on with other files.\n", filename, err)
+		msg := fmt.Sprintf("error uploading files. filename: %v, err: %v\n", filename, err)
 		log.Println(msg)
 		respondWithError(w, http.StatusInternalServerError, msg)
 		return
