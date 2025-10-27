@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/muhammadolammi/jobmatchapi/internal/database"
 )
@@ -53,9 +54,14 @@ func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if resultFound {
 		if time.Since(result.CreatedAt) < 24*time.Hour {
+
 			remaining := 24*time.Hour - time.Since(result.CreatedAt)
-			msg := fmt.Sprintf("Please try again after in %v Minutes", remaining.Minutes())
-			respondWithError(w, http.StatusTooManyRequests, msg)
+			msg := fmt.Sprintf("You have already analyzed a resume recently. Please wait %.0f minutes before trying again.", remaining.Minutes())
+			respondWithJson(w, http.StatusTooManyRequests, map[string]any{
+				"error":            "rate_limit_exceeded",
+				"message":          msg,
+				"retry_in_minutes": int(remaining.Minutes()),
+			})
 			return
 		}
 	}
@@ -203,10 +209,15 @@ func (apiConfig *Config) analyzeHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	//  if we get here, the flow ran successfully, now we can read result.
-	result, err := apiConfig.DB.GetResultBySession(r.Context(), body.SessionID)
+	respondWithJson(w, http.StatusOK, "langflow analyzed data.")
+}
+
+func (apiConfig *Config) getResultHandler(w http.ResponseWriter, r *http.Request) {
+	session_id := chi.URLParam(r, "sessionID")
+
+	result, err := apiConfig.DB.GetResultBySession(r.Context(), session_id)
 	if err != nil {
-		msg := fmt.Sprintf("error getting result for analysis. err: %v", err)
+		msg := fmt.Sprintf("error getting result for session. err: %v", err)
 		log.Println(msg)
 		respondWithError(w, http.StatusInternalServerError, msg)
 		return
