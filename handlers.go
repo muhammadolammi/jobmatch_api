@@ -33,51 +33,81 @@ func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
 		respondWithError(w, http.StatusBadRequest, "Missing session_id in form data")
 		return
 	}
-	files := r.MultipartForm.File["files"]
-	if len(files) == 0 {
-		http.Error(w, "No files uploaded", http.StatusBadRequest)
+	result, err := apiConfig.DB.GetResultBySession(r.Context(), sessionID)
+	if err != nil {
+		msg := fmt.Sprintf("Error check result, err: %v", err)
+		log.Println(msg)
+		respondWithError(w, http.StatusInternalServerError, msg)
 		return
 	}
-	for _, fileHeader := range files {
-		// Step 4.1: get the original filename
-		filename := fileHeader.Filename
-		filename = filepath.Base(filename)
+	if time.Since(result.CreatedAt) < 24*time.Hour {
+		remaining := 24*time.Hour - time.Since(result.CreatedAt)
+		msg := fmt.Sprintf("try again after in %v Minutes", remaining.Minutes())
+		respondWithError(w, http.StatusInternalServerError, msg)
+		return
+	}
+	files := r.MultipartForm.File["file"]
+	if len(files) == 0 {
 
-		log.Println("Processing file:", filename)
+		respondWithError(w, http.StatusBadRequest, "No file uploaded")
+		return
+	}
 
-		// Step 4.2: open the uploaded file
-		file, err := fileHeader.Open()
-		if err != nil {
-			log.Println("Error opening file:", filename, err)
-			continue
-		}
+	if len(files) > 1 {
 
-		// Check file extension
-		ext := strings.ToLower(filepath.Ext(filename))
-		allowed := map[string]bool{".pdf": true, ".docx": true, ".txt": true}
-		if !allowed[ext] {
-			log.Println("Invalid file type:", filename)
-			continue
-		}
+		respondWithError(w, http.StatusBadRequest, "Only one file allowed")
+		return
+	}
+	// Step 4.1: get the original filename
+	fileHeader := files[0]
+	filename := fileHeader.Filename
+	filename = filepath.Base(filename)
 
-		data, err := io.ReadAll(file)
-		file.Close()
-		if err != nil {
-			log.Println("Error reading file:", filename, err)
-			continue
-		}
+	log.Println("Processing file:", filename)
 
-		log.Printf("Read %d bytes from %s\n", len(data), filename)
-		//  save data to db
-		_, err = apiConfig.DB.CreateResume(r.Context(), database.CreateResumeParams{
-			FileName:  filename,
-			Text:      string(data),
-			SessionID: sessionID,
-		})
-		if err != nil {
-			log.Printf("error uploading files. filename: %v, err: %v, moving on with other files.\n", filename, err)
-			continue
-		}
+	// Step 4.2: open the uploaded file
+	file, err := fileHeader.Open()
+	if err != nil {
+		msg := fmt.Sprintf("Error opening file: %v, err: %v", filename, err)
+		log.Println(msg)
+
+		respondWithError(w, http.StatusInternalServerError, msg)
+		return
+	}
+
+	// Check file extension
+	ext := strings.ToLower(filepath.Ext(filename))
+	allowed := map[string]bool{".pdf": true, ".docx": true, ".txt": true}
+	if !allowed[ext] {
+		msg := fmt.Sprintf("Invalid file type: %v", filename)
+		log.Println(msg)
+		respondWithError(w, http.StatusInternalServerError, msg)
+		return
+
+	}
+
+	data, err := io.ReadAll(file)
+	file.Close()
+	if err != nil {
+		msg := fmt.Sprintf("Error reading file:%v , err: %v", filename, err)
+		log.Println(msg)
+		respondWithError(w, http.StatusInternalServerError, msg)
+		return
+
+	}
+
+	log.Printf("Read %d bytes from %s\n", len(data), filename)
+	//  save data to db
+	_, err = apiConfig.DB.CreateResume(r.Context(), database.CreateResumeParams{
+		FileName:  filename,
+		Text:      string(data),
+		SessionID: sessionID,
+	})
+	if err != nil {
+		msg := fmt.Sprintf("error uploading files. filename: %v, err: %v, moving on with other files.\n", filename, err)
+		log.Println(msg)
+		respondWithError(w, http.StatusInternalServerError, msg)
+		return
 	}
 	respondWithJson(w, http.StatusOK, map[string]string{
 		"message": "Upload successful",
@@ -115,6 +145,7 @@ func (apiConfig *Config) analyzeHandler(w http.ResponseWriter, r *http.Request) 
 	langflowInput := fmt.Sprintf("Job Title \n %s\n Job Description\n%s\n", body.JobTitle, body.JobDescription)
 	payload := map[string]interface{}{
 		"input_type":  "chat",
+		"output_tye":  "chat",
 		"input_value": langflowInput,
 		"session_id":  body.SessionID,
 	}
@@ -125,7 +156,7 @@ func (apiConfig *Config) analyzeHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	// Create HTTP client with timeout
 	client := &http.Client{
-		Timeout: 60 * 60 * time.Second,
+		Timeout: 60 * 2 * time.Second,
 	}
 
 	req, err := http.NewRequest(http.MethodPost, apiConfig.LANGFLOW_URL, bytes.NewReader(payloadBytes))

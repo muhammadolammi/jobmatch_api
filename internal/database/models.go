@@ -15,6 +15,7 @@ type Result struct {
 	ID        uuid.UUID
 	Result    json.RawMessage
 	SessionID string
+	CreatedAt time.Time
 }
 
 type Resume struct {

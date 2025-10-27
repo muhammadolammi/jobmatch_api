@@ -36,23 +36,33 @@ func (q *Queries) DeleteResultBySession(ctx context.Context, sessionID string) e
 }
 
 const getAllResults = `-- name: GetAllResults :one
-SELECT id, result, session_id FROM results
+SELECT id, result, session_id, created_at FROM results
 `
 
 func (q *Queries) GetAllResults(ctx context.Context) (Result, error) {
 	row := q.db.QueryRowContext(ctx, getAllResults)
 	var i Result
-	err := row.Scan(&i.ID, &i.Result, &i.SessionID)
+	err := row.Scan(
+		&i.ID,
+		&i.Result,
+		&i.SessionID,
+		&i.CreatedAt,
+	)
 	return i, err
 }
 
 const getResultBySession = `-- name: GetResultBySession :one
-SELECT id, result, session_id FROM results WHERE session_id=$1
+SELECT id, result, session_id, created_at FROM results WHERE session_id=$1
 `
 
 func (q *Queries) GetResultBySession(ctx context.Context, sessionID string) (Result, error) {
 	row := q.db.QueryRowContext(ctx, getResultBySession, sessionID)
 	var i Result
-	err := row.Scan(&i.ID, &i.Result, &i.SessionID)
+	err := row.Scan(
+		&i.ID,
+		&i.Result,
+		&i.SessionID,
+		&i.CreatedAt,
+	)
 	return i, err
 }
