@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -119,9 +120,11 @@ func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	log.Printf("Read %d bytes from %s\n", len(data), filename)
 	//  save data to db
+	encoded := base64.StdEncoding.EncodeToString(data)
+
 	_, err = apiConfig.DB.CreateResume(r.Context(), database.CreateResumeParams{
 		FileName:  filename,
-		Text:      string(data),
+		Text:      encoded,
 		SessionID: sessionID,
 	})
 	if err != nil {
