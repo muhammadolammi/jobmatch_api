@@ -53,7 +53,9 @@ func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
 		resultFound = true
 	}
 	if resultFound {
-		if time.Since(result.CreatedAt) < 24*time.Hour {
+		// 	if time.Since(result.CreatedAt) < 24*time.Hour {
+
+		if time.Since(result.CreatedAt) < 24*time.Second {
 
 			remaining := 24*time.Hour - time.Since(result.CreatedAt)
 			msg := fmt.Sprintf("You have already analyzed a resume recently. Please wait %.0f minutes before trying again.", remaining.Minutes())
