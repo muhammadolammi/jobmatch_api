@@ -61,7 +61,6 @@ func server(apiConfig *Config) {
 	apiRoute.Post("/upload", apiConfig.uploadHandler)
 	apiRoute.Post("/analyze", apiConfig.analyzeHandler)
 	apiRoute.Get("/results/{sessionID}", apiConfig.getResultHandler)
-
 	router.Mount("/api", apiRoute)
 	srv := &http.Server{
 		Addr:              ":" + apiConfig.PORT,

@@ -56,9 +56,9 @@ func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
 	if resultFound {
 		// 	if time.Since(result.CreatedAt) < 24*time.Hour {
 
-		if time.Since(result.CreatedAt) < 24*time.Second {
+		if time.Since(result.CreatedAt) < 1*time.Hour {
 
-			remaining := 24*time.Hour - time.Since(result.CreatedAt)
+			remaining := 1*time.Hour - time.Since(result.CreatedAt)
 			msg := fmt.Sprintf("You have already analyzed a resume recently. Please wait %.0f minutes before trying again.", remaining.Minutes())
 			respondWithJson(w, http.StatusTooManyRequests, map[string]any{
 				"error":            "rate_limit_exceeded",
