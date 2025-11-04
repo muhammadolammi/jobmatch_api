@@ -8,6 +8,7 @@ import (
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"github.com/muhammadolammi/jobmatchapi/internal/database"
+	"github.com/muhammadolammi/jobmatchapi/internal/handlers"
 )
 
 func main() {
@@ -22,9 +23,9 @@ func main() {
 	if port == "" {
 		log.Fatal("empty PORT in environment")
 	}
-	authToken := os.Getenv("AUTH_TOKEN")
-	if authToken == "" {
-		log.Fatal("empty AUTH_TOKEN in environment")
+	clientApiKey := os.Getenv("CLIENT_API_KEY")
+	if clientApiKey == "" {
+		log.Fatal("empty CLIENT_API_KEY in environment")
 	}
 	langflowUrl := os.Getenv("LANGFLOW_URL")
 	if langflowUrl == "" {
@@ -34,6 +35,10 @@ func main() {
 	if langflowApiKey == "" {
 		log.Fatal("empty LANGFLOW_API_KEY in environment")
 	}
+	jwtKey := os.Getenv("JWT_KEY")
+	if jwtKey == "" {
+		log.Fatal("empty JWT_KEY in environment")
+	}
 
 	db, err := sql.Open("postgres", dbUrl)
 	if err != nil {
@@ -41,12 +46,13 @@ func main() {
 	}
 
 	queries := database.New(db)
-	apiConfig := Config{
-		DB:               *queries,
-		PORT:             port,
-		AUTH_TOKEN:       authToken,
-		LANGFLOW_API_KEY: langflowApiKey,
-		LANGFLOW_URL:     langflowUrl,
+	apiConfig := handlers.Config{
+		DB:             queries,
+		Port:           port,
+		ClientApiKey:   clientApiKey,
+		LangflowApiKey: langflowApiKey,
+		LangflowUrl:    langflowUrl,
+		JwtKey:         jwtKey,
 	}
 	server(&apiConfig)
 

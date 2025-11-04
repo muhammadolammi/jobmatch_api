@@ -7,6 +7,8 @@ package database
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 const clearResumes = `-- name: ClearResumes :exec
@@ -25,13 +27,13 @@ VALUES ( $1, $2, $3)
 
 ON CONFLICT (session_id)
 DO UPDATE SET text = EXCLUDED.text
-RETURNING id, file_name, text, session_id, created_at
+RETURNING id, file_name, text, created_at, session_id
 `
 
 type CreateResumeParams struct {
 	FileName  string
 	Text      string
-	SessionID string
+	SessionID uuid.UUID
 }
 
 func (q *Queries) CreateResume(ctx context.Context, arg CreateResumeParams) (Resume, error) {
@@ -41,8 +43,8 @@ func (q *Queries) CreateResume(ctx context.Context, arg CreateResumeParams) (Res
 		&i.ID,
 		&i.FileName,
 		&i.Text,
-		&i.SessionID,
 		&i.CreatedAt,
+		&i.SessionID,
 	)
 	return i, err
 }
@@ -51,13 +53,13 @@ const deleteResumesBySession = `-- name: DeleteResumesBySession :exec
 DELETE  FROM resumes WHERE session_id=$1
 `
 
-func (q *Queries) DeleteResumesBySession(ctx context.Context, sessionID string) error {
+func (q *Queries) DeleteResumesBySession(ctx context.Context, sessionID uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, deleteResumesBySession, sessionID)
 	return err
 }
 
 const getResumes = `-- name: GetResumes :one
-SELECT id, file_name, text, session_id, created_at FROM resumes
+SELECT id, file_name, text, created_at, session_id FROM resumes
 `
 
 func (q *Queries) GetResumes(ctx context.Context) (Resume, error) {
@@ -67,8 +69,8 @@ func (q *Queries) GetResumes(ctx context.Context) (Resume, error) {
 		&i.ID,
 		&i.FileName,
 		&i.Text,
-		&i.SessionID,
 		&i.CreatedAt,
+		&i.SessionID,
 	)
 	return i, err
 }

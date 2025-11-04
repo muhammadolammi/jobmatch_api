@@ -8,30 +8,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/muhammadolammi/jobmatchapi/internal/handlers"
 )
 
-// Middleware to check for the API key in the authorization header for all POST, PUT, DELETE, and OPTIONS requests
-func (apiConfig *Config) clientAuth() func(http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			authToken := r.Header.Get("Authorization")
-			if authToken == "" {
-				log.Println("empty auth token in request.")
-				respondWithError(w, http.StatusUnauthorized, "empty auth token in request.")
-				return
-			}
-			if authToken != apiConfig.AUTH_TOKEN {
-				log.Println("invalid auth token in request.")
-				respondWithError(w, http.StatusUnauthorized, "invalid auth token in request.")
-				return
-
-			}
-
-			next.ServeHTTP(w, r)
-		})
-	}
-}
-func server(apiConfig *Config) {
+func server(apiConfig *handlers.Config) {
 
 	// Define CORS options
 	corsOptions := cors.Options{
@@ -52,22 +32,24 @@ func server(apiConfig *Config) {
 	router.Use(middleware.Recoverer)
 
 	router.Use(cors.Handler(corsOptions))
-	router.Use(apiConfig.clientAuth())
+	router.Use(apiConfig.ClientAuth())
 
 	// ADD ROUTES
-	apiRoute.Get("/hello", helloReady)
-	apiRoute.Get("/error", errorReady)
+	apiRoute.Get("/hello", handlers.HelloReady)
+	apiRoute.Get("/error", handlers.ErrorReady)
+	// auth
+	apiRoute.Get("/user", apiConfig.AuthMiddleware(false, []byte(apiConfig.JwtKey), apiConfig.GetUserHandler))
 
-	apiRoute.Post("/upload", apiConfig.uploadHandler)
-	apiRoute.Post("/analyze", apiConfig.analyzeHandler)
-	apiRoute.Get("/results/{sessionID}", apiConfig.getResultHandler)
+	apiRoute.Post("/upload", apiConfig.UploadHandler)
+	apiRoute.Post("/analyze", apiConfig.AnalyzeHandler)
+	apiRoute.Get("/results/{sessionID}", apiConfig.GetResultHandler)
 	router.Mount("/api", apiRoute)
 	srv := &http.Server{
-		Addr:              ":" + apiConfig.PORT,
+		Addr:              ":" + apiConfig.Port,
 		Handler:           router,
 		ReadHeaderTimeout: time.Minute,
 	}
 
-	log.Printf("Serving on port: %s\n", apiConfig.PORT)
+	log.Printf("Serving on port: %s\n", apiConfig.Port)
 	log.Fatal(srv.ListenAndServe())
 }

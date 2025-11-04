@@ -8,6 +8,8 @@ package database
 import (
 	"context"
 	"encoding/json"
+
+	"github.com/google/uuid"
 )
 
 const createResult = `-- name: CreateResult :exec
@@ -18,7 +20,7 @@ VALUES ( $1, $2)
 
 type CreateResultParams struct {
 	Result    json.RawMessage
-	SessionID string
+	SessionID uuid.UUID
 }
 
 func (q *Queries) CreateResult(ctx context.Context, arg CreateResultParams) error {
@@ -30,13 +32,13 @@ const deleteResultBySession = `-- name: DeleteResultBySession :exec
 DELETE  FROM results WHERE session_id=$1
 `
 
-func (q *Queries) DeleteResultBySession(ctx context.Context, sessionID string) error {
+func (q *Queries) DeleteResultBySession(ctx context.Context, sessionID uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, deleteResultBySession, sessionID)
 	return err
 }
 
 const getAllResults = `-- name: GetAllResults :one
-SELECT id, result, session_id, created_at FROM results
+SELECT id, result, created_at, session_id FROM results
 `
 
 func (q *Queries) GetAllResults(ctx context.Context) (Result, error) {
@@ -45,24 +47,24 @@ func (q *Queries) GetAllResults(ctx context.Context) (Result, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Result,
-		&i.SessionID,
 		&i.CreatedAt,
+		&i.SessionID,
 	)
 	return i, err
 }
 
 const getResultBySession = `-- name: GetResultBySession :one
-SELECT id, result, session_id, created_at FROM results WHERE session_id=$1
+SELECT id, result, created_at, session_id FROM results WHERE session_id=$1
 `
 
-func (q *Queries) GetResultBySession(ctx context.Context, sessionID string) (Result, error) {
+func (q *Queries) GetResultBySession(ctx context.Context, sessionID uuid.UUID) (Result, error) {
 	row := q.db.QueryRowContext(ctx, getResultBySession, sessionID)
 	var i Result
 	err := row.Scan(
 		&i.ID,
 		&i.Result,
-		&i.SessionID,
 		&i.CreatedAt,
+		&i.SessionID,
 	)
 	return i, err
 }

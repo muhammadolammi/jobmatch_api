@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"bytes"
@@ -16,14 +16,15 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 	"github.com/muhammadolammi/jobmatchapi/internal/database"
+	"github.com/muhammadolammi/jobmatchapi/internal/helpers"
 )
 
-func helloReady(w http.ResponseWriter, r *http.Request) { respondWithJson(w, 200, "hello") }
-func errorReady(w http.ResponseWriter, r *http.Request) {
-	respondWithError(w, 200, "this is an error test")
+func HelloReady(w http.ResponseWriter, r *http.Request) { helpers.RespondWithJson(w, 200, "hello") }
+func ErrorReady(w http.ResponseWriter, r *http.Request) {
+	helpers.RespondWithError(w, 200, "this is an error test")
 }
 
-func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
+func (apiConfig *Config) UploadHandler(w http.ResponseWriter, r *http.Request) {
 
 	r.Body = http.MaxBytesReader(w, r.Body, 20<<20)
 	// Parse up to 10MB of file parts kept in memory before writing to temp files
@@ -32,12 +33,19 @@ func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error parsing multipart form: "+err.Error(), http.StatusBadRequest)
 		return
 	}
-	sessionID := r.FormValue("session_id")
-	if sessionID == "" {
-		respondWithError(w, http.StatusBadRequest, "Missing session_id in form data")
+	session_id := r.FormValue("session_id")
+	if session_id == "" {
+		helpers.RespondWithError(w, http.StatusBadRequest, "Missing session_id in form data")
 		return
 	}
-	result, err := apiConfig.DB.GetResultBySession(r.Context(), sessionID)
+	sessionId, err := uuid.Parse(session_id)
+	if err != nil {
+		msg := fmt.Sprintf("error parsing uuid from param. err: %v", err)
+		log.Println(msg)
+		helpers.RespondWithError(w, http.StatusInternalServerError, msg)
+		return
+	}
+	result, err := apiConfig.DB.GetResultBySession(r.Context(), sessionId)
 	resultFound := false
 	if err != nil {
 		if !(err == sql.ErrNoRows) {
@@ -45,7 +53,7 @@ func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
 			msg := fmt.Sprintf("Error check result, err: %v", err)
 
 			log.Println(msg)
-			respondWithError(w, http.StatusInternalServerError, msg)
+			helpers.RespondWithError(w, http.StatusInternalServerError, msg)
 			return
 		}
 
@@ -60,7 +68,7 @@ func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
 
 			remaining := 1*time.Hour - time.Since(result.CreatedAt)
 			msg := fmt.Sprintf("You have already analyzed a resume recently. Please wait %.0f minutes before trying again.", remaining.Minutes())
-			respondWithJson(w, http.StatusTooManyRequests, map[string]any{
+			helpers.RespondWithJson(w, http.StatusTooManyRequests, map[string]any{
 				"error":            "rate_limit_exceeded",
 				"message":          msg,
 				"retry_in_minutes": int(remaining.Minutes()),
@@ -71,13 +79,13 @@ func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
 	files := r.MultipartForm.File["file"]
 	if len(files) == 0 {
 
-		respondWithError(w, http.StatusBadRequest, "No file uploaded")
+		helpers.RespondWithError(w, http.StatusBadRequest, "No file uploaded")
 		return
 	}
 
 	if len(files) > 1 {
 
-		respondWithError(w, http.StatusBadRequest, "Only one file allowed")
+		helpers.RespondWithError(w, http.StatusBadRequest, "Only one file allowed")
 		return
 	}
 	// Step 4.1: get the original filename
@@ -93,7 +101,7 @@ func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
 		msg := fmt.Sprintf("Error opening file: %v, err: %v", filename, err)
 		log.Println(msg)
 
-		respondWithError(w, http.StatusInternalServerError, msg)
+		helpers.RespondWithError(w, http.StatusInternalServerError, msg)
 		return
 	}
 
@@ -103,7 +111,7 @@ func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
 	if !allowed[ext] {
 		msg := fmt.Sprintf("Invalid file type: %v", filename)
 		log.Println(msg)
-		respondWithError(w, http.StatusInternalServerError, msg)
+		helpers.RespondWithError(w, http.StatusInternalServerError, msg)
 		return
 
 	}
@@ -113,7 +121,7 @@ func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		msg := fmt.Sprintf("Error reading file:%v , err: %v", filename, err)
 		log.Println(msg)
-		respondWithError(w, http.StatusInternalServerError, msg)
+		helpers.RespondWithError(w, http.StatusInternalServerError, msg)
 		return
 
 	}
@@ -125,21 +133,21 @@ func (apiConfig *Config) uploadHandler(w http.ResponseWriter, r *http.Request) {
 	_, err = apiConfig.DB.CreateResume(r.Context(), database.CreateResumeParams{
 		FileName:  filename,
 		Text:      encoded,
-		SessionID: sessionID,
+		SessionID: sessionId,
 	})
 	if err != nil {
 		msg := fmt.Sprintf("error uploading files. filename: %v, err: %v\n", filename, err)
 		log.Println(msg)
-		respondWithError(w, http.StatusInternalServerError, msg)
+		helpers.RespondWithError(w, http.StatusInternalServerError, msg)
 		return
 	}
-	respondWithJson(w, http.StatusOK, map[string]string{
+	helpers.RespondWithJson(w, http.StatusOK, map[string]string{
 		"message": "Upload successful",
 	})
 
 }
 
-func (apiConfig *Config) analyzeHandler(w http.ResponseWriter, r *http.Request) {
+func (apiConfig *Config) AnalyzeHandler(w http.ResponseWriter, r *http.Request) {
 	body := struct {
 		SessionID      string `json:"session_id"`
 		JobTitle       string `json:"job_title"`
@@ -148,25 +156,25 @@ func (apiConfig *Config) analyzeHandler(w http.ResponseWriter, r *http.Request) 
 	encoder := json.NewDecoder(r.Body)
 	err := encoder.Decode(&body)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "error decoding request body. err: "+err.Error())
+		helpers.RespondWithError(w, http.StatusInternalServerError, "error decoding request body. err: "+err.Error())
 		return
 	}
 	if body.SessionID == "" {
-		respondWithError(w, http.StatusInternalServerError, "session_id can't be empty ")
+		helpers.RespondWithError(w, http.StatusInternalServerError, "session_id can't be empty ")
 		return
 
 	}
 	if body.JobDescription == "" {
-		respondWithError(w, http.StatusInternalServerError, "job_description can't be empty")
+		helpers.RespondWithError(w, http.StatusInternalServerError, "job_description can't be empty")
 		return
 
 	}
 	if body.JobTitle == "" {
-		respondWithError(w, http.StatusInternalServerError, "job_title can't be empty")
+		helpers.RespondWithError(w, http.StatusInternalServerError, "job_title can't be empty")
 		return
 
 	}
-	langflowInput := fmt.Sprintf("Job Title \n %s\n Job Description\n%s\n", body.JobTitle, body.JobDescription)
+	langflowInput := fmt.Sprintf("Job Title:\n %s\nJob Description:\n%s\n", body.JobTitle, body.JobDescription)
 	payload := map[string]interface{}{
 		"input_type":  "chat",
 		"output_tye":  "chat",
@@ -175,7 +183,7 @@ func (apiConfig *Config) analyzeHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "error encoding payload: "+err.Error())
+		helpers.RespondWithError(w, http.StatusInternalServerError, "error encoding payload: "+err.Error())
 		return
 	}
 	// Create HTTP client with timeout
@@ -183,25 +191,25 @@ func (apiConfig *Config) analyzeHandler(w http.ResponseWriter, r *http.Request) 
 		Timeout: 60 * 2 * time.Second,
 	}
 
-	req, err := http.NewRequest(http.MethodPost, apiConfig.LANGFLOW_URL, bytes.NewReader(payloadBytes))
+	req, err := http.NewRequest(http.MethodPost, apiConfig.LangflowUrl, bytes.NewReader(payloadBytes))
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "error creating request: "+err.Error())
+		helpers.RespondWithError(w, http.StatusInternalServerError, "error creating request: "+err.Error())
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-api-key", apiConfig.LANGFLOW_API_KEY)
+	req.Header.Set("x-api-key", apiConfig.LangflowApiKey)
 	// Send request
 	resp, err := client.Do(req)
 	if err != nil {
 		log.Println("error making API request: " + err.Error())
-		respondWithError(w, http.StatusBadGateway, "error making API request: "+err.Error())
+		helpers.RespondWithError(w, http.StatusBadGateway, "error making API request: "+err.Error())
 		return
 	}
 	defer resp.Body.Close()
 	// Read response body
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "error reading response: "+err.Error())
+		helpers.RespondWithError(w, http.StatusInternalServerError, "error reading response: "+err.Error())
 		return
 	}
 
@@ -210,22 +218,29 @@ func (apiConfig *Config) analyzeHandler(w http.ResponseWriter, r *http.Request) 
 		// Avoid logging or echoing headers that may contain secrets.
 		msg := fmt.Sprintf("langflow returned status %d: %s", resp.StatusCode, string(respBody))
 		log.Println(msg)
-		respondWithError(w, http.StatusBadGateway, msg)
+		helpers.RespondWithError(w, http.StatusBadGateway, msg)
 		return
 	}
 
-	respondWithJson(w, http.StatusOK, "langflow analyzed data.")
+	helpers.RespondWithJson(w, http.StatusOK, "langflow analyzed data.")
 }
 
-func (apiConfig *Config) getResultHandler(w http.ResponseWriter, r *http.Request) {
+func (apiConfig *Config) GetResultHandler(w http.ResponseWriter, r *http.Request) {
 	session_id := chi.URLParam(r, "sessionID")
+	sessionId, err := uuid.Parse(session_id)
+	if err != nil {
+		msg := fmt.Sprintf("error parsing uuid from param. err: %v", err)
+		log.Println(msg)
+		helpers.RespondWithError(w, http.StatusInternalServerError, msg)
+		return
+	}
 
-	result, err := apiConfig.DB.GetResultBySession(r.Context(), session_id)
+	result, err := apiConfig.DB.GetResultBySession(r.Context(), sessionId)
 	if err != nil {
 		msg := fmt.Sprintf("error getting result for session. err: %v", err)
 		log.Println(msg)
-		respondWithError(w, http.StatusInternalServerError, msg)
+		helpers.RespondWithError(w, http.StatusInternalServerError, msg)
 		return
 	}
-	respondWithJson(w, 200, result.Result)
+	helpers.RespondWithJson(w, 200, result.Result)
 }
