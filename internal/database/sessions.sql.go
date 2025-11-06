@@ -15,7 +15,7 @@ const createSession = `-- name: CreateSession :one
 INSERT INTO sessions (
 name, user_id )
 VALUES ( $1, $2)
-RETURNING id, created_at, name, user_id, status
+RETURNING id, created_at, name, user_id, status, job_title, job_description
 `
 
 type CreateSessionParams struct {
@@ -32,12 +32,34 @@ func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (S
 		&i.Name,
 		&i.UserID,
 		&i.Status,
+		&i.JobTitle,
+		&i.JobDescription,
+	)
+	return i, err
+}
+
+const getSession = `-- name: GetSession :one
+SELECT id, created_at, name, user_id, status, job_title, job_description FROM sessions 
+WHERE id = $1
+`
+
+func (q *Queries) GetSession(ctx context.Context, id uuid.UUID) (Session, error) {
+	row := q.db.QueryRowContext(ctx, getSession, id)
+	var i Session
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.Name,
+		&i.UserID,
+		&i.Status,
+		&i.JobTitle,
+		&i.JobDescription,
 	)
 	return i, err
 }
 
 const getUserSessions = `-- name: GetUserSessions :many
-SELECT id, created_at, name, user_id, status FROM sessions 
+SELECT id, created_at, name, user_id, status, job_title, job_description FROM sessions 
 WHERE user_id = $1
 ORDER BY created_at DESC
 `
@@ -57,6 +79,8 @@ func (q *Queries) GetUserSessions(ctx context.Context, userID uuid.UUID) ([]Sess
 			&i.Name,
 			&i.UserID,
 			&i.Status,
+			&i.JobTitle,
+			&i.JobDescription,
 		); err != nil {
 			return nil, err
 		}
@@ -69,4 +93,20 @@ func (q *Queries) GetUserSessions(ctx context.Context, userID uuid.UUID) ([]Sess
 		return nil, err
 	}
 	return items, nil
+}
+
+const updateSessionStatus = `-- name: UpdateSessionStatus :exec
+UPDATE sessions 
+SET status=$1
+WHERE id=$2
+`
+
+type UpdateSessionStatusParams struct {
+	Status string
+	ID     uuid.UUID
+}
+
+func (q *Queries) UpdateSessionStatus(ctx context.Context, arg UpdateSessionStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateSessionStatus, arg.Status, arg.ID)
+	return err
 }

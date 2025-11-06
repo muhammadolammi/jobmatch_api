@@ -21,26 +21,44 @@ func (q *Queries) ClearResumes(ctx context.Context) error {
 }
 
 const createResume = `-- name: CreateResume :one
-INSERT INTO resumes (
-file_name, text, session_id)
-VALUES ( $1, $2, $3)
+INSERT INTO resumes (session_id, object_key, original_filename, mime, size_bytes, storage_provider, upload_status, storage_url)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 
-RETURNING id, file_name, text, created_at, session_id
+RETURNING id, original_filename, mime, size_bytes, storage_provider, object_key, storage_url, upload_status, created_at, session_id
 `
 
 type CreateResumeParams struct {
-	FileName  string
-	Text      string
-	SessionID uuid.UUID
+	SessionID        uuid.UUID
+	ObjectKey        string
+	OriginalFilename string
+	Mime             string
+	SizeBytes        int64
+	StorageProvider  string
+	UploadStatus     string
+	StorageUrl       string
 }
 
 func (q *Queries) CreateResume(ctx context.Context, arg CreateResumeParams) (Resume, error) {
-	row := q.db.QueryRowContext(ctx, createResume, arg.FileName, arg.Text, arg.SessionID)
+	row := q.db.QueryRowContext(ctx, createResume,
+		arg.SessionID,
+		arg.ObjectKey,
+		arg.OriginalFilename,
+		arg.Mime,
+		arg.SizeBytes,
+		arg.StorageProvider,
+		arg.UploadStatus,
+		arg.StorageUrl,
+	)
 	var i Resume
 	err := row.Scan(
 		&i.ID,
-		&i.FileName,
-		&i.Text,
+		&i.OriginalFilename,
+		&i.Mime,
+		&i.SizeBytes,
+		&i.StorageProvider,
+		&i.ObjectKey,
+		&i.StorageUrl,
+		&i.UploadStatus,
 		&i.CreatedAt,
 		&i.SessionID,
 	)
@@ -57,7 +75,7 @@ func (q *Queries) DeleteResumesBySession(ctx context.Context, sessionID uuid.UUI
 }
 
 const getResumes = `-- name: GetResumes :one
-SELECT id, file_name, text, created_at, session_id FROM resumes
+SELECT id, original_filename, mime, size_bytes, storage_provider, object_key, storage_url, upload_status, created_at, session_id FROM resumes
 `
 
 func (q *Queries) GetResumes(ctx context.Context) (Resume, error) {
@@ -65,8 +83,13 @@ func (q *Queries) GetResumes(ctx context.Context) (Resume, error) {
 	var i Resume
 	err := row.Scan(
 		&i.ID,
-		&i.FileName,
-		&i.Text,
+		&i.OriginalFilename,
+		&i.Mime,
+		&i.SizeBytes,
+		&i.StorageProvider,
+		&i.ObjectKey,
+		&i.StorageUrl,
+		&i.UploadStatus,
 		&i.CreatedAt,
 		&i.SessionID,
 	)

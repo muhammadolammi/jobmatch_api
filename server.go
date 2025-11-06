@@ -45,10 +45,12 @@ func server(apiConfig *handlers.Config) {
 
 	// session
 	apiRoute.Post("/sessions", apiConfig.AuthMiddleware(apiConfig.CreateSession))
+	apiRoute.Post("/sessions/{id}/presign", apiConfig.AuthMiddleware(apiConfig.PresignUploadHandler))
+
 	apiRoute.Get("/sessions", apiConfig.AuthMiddleware(apiConfig.GetSessions))
 
 	// analyze
-	apiRoute.Post("/upload", apiConfig.AuthMiddleware(apiConfig.UploadHandler))
+	apiRoute.Post("/uploads/complete", apiConfig.AuthMiddleware(apiConfig.UploadCompleteHandler))
 	apiRoute.Post("/analyze", apiConfig.AnalyzeHandler)
 	apiRoute.Get("/results/{sessionID}", apiConfig.GetResultHandler)
 	router.Mount("/api", apiRoute)

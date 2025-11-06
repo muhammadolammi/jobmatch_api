@@ -1,7 +1,6 @@
 -- name: CreateResume :one
-INSERT INTO resumes (
-file_name, text, session_id)
-VALUES ( $1, $2, $3)
+INSERT INTO resumes (session_id, object_key, original_filename, mime, size_bytes, storage_provider, upload_status, storage_url)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 
 RETURNING *;
 
@@ -15,3 +14,6 @@ DELETE  FROM resumes;
 
 -- name: DeleteResumesBySession :exec
 DELETE  FROM resumes WHERE session_id=$1;
+
+-- name: DeleteResumesBySession :exec
+

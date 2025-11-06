@@ -1,6 +1,8 @@
 package handlers
 
-import "github.com/muhammadolammi/jobmatchapi/internal/database"
+import (
+	"github.com/muhammadolammi/jobmatchapi/internal/database"
+)
 
 // User model helpers
 func DbUserToModelsUser(dbUser database.User) User {
@@ -24,11 +26,13 @@ func DbUsersToModelsUsers(dbUsers []database.User) []User {
 // Session model helpers
 func DbSessionToModelsSession(dbSession database.Session) Session {
 	return Session{
-		ID:        dbSession.ID,
-		Name:      dbSession.Name,
-		CreatedAt: dbSession.CreatedAt,
-		UserID:    dbSession.UserID,
-		Status:    dbSession.Status,
+		ID:             dbSession.ID,
+		Name:           dbSession.Name,
+		CreatedAt:      dbSession.CreatedAt,
+		UserID:         dbSession.UserID,
+		Status:         dbSession.Status,
+		JobTitle:       dbSession.JobTitle,
+		JobDescription: dbSession.JobDescription,
 	}
 
 }
