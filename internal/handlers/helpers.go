@@ -20,3 +20,23 @@ func DbUsersToModelsUsers(dbUsers []database.User) []User {
 	}
 	return users
 }
+
+// Session model helpers
+func DbSessionToModelsSession(dbSession database.Session) Session {
+	return Session{
+		ID:        dbSession.ID,
+		Name:      dbSession.Name,
+		CreatedAt: dbSession.CreatedAt,
+		UserID:    dbSession.UserID,
+		Status:    dbSession.Status,
+	}
+
+}
+
+func DbSessionsToModelsSessions(dbSessions []database.Session) []Session {
+	sessions := []Session{}
+	for _, dbSession := range dbSessions {
+		sessions = append(sessions, DbSessionToModelsSession(dbSession))
+	}
+	return sessions
+}

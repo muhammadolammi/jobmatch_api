@@ -38,9 +38,17 @@ func server(apiConfig *handlers.Config) {
 	apiRoute.Get("/hello", handlers.HelloReady)
 	apiRoute.Get("/error", handlers.ErrorReady)
 	// auth
-	apiRoute.Get("/user", apiConfig.AuthMiddleware(false, []byte(apiConfig.JwtKey), apiConfig.GetUserHandler))
+	apiRoute.Get("/me", apiConfig.AuthMiddleware(apiConfig.GetUserHandler))
+	apiRoute.Post("/login", apiConfig.LoginHandler)
+	apiRoute.Post("/register", apiConfig.RegisterHandler)
+	apiRoute.Post("/refresh", apiConfig.RefreshTokens)
 
-	apiRoute.Post("/upload", apiConfig.UploadHandler)
+	// session
+	apiRoute.Post("/sessions", apiConfig.AuthMiddleware(apiConfig.CreateSession))
+	apiRoute.Get("/sessions", apiConfig.AuthMiddleware(apiConfig.GetSessions))
+
+	// analyze
+	apiRoute.Post("/upload", apiConfig.AuthMiddleware(apiConfig.UploadHandler))
 	apiRoute.Post("/analyze", apiConfig.AnalyzeHandler)
 	apiRoute.Get("/results/{sessionID}", apiConfig.GetResultHandler)
 	router.Mount("/api", apiRoute)

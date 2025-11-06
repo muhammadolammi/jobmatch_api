@@ -58,17 +58,16 @@ type Resume struct {
 	SessionID uuid.UUID
 }
 
-type Session struct {
-	ID        uuid.UUID
-	CreatedAt time.Time
-	Name      string
-	UserID    uuid.UUID
-}
-
 type User struct {
 	ID        uuid.UUID `json:"id"`
 	Email     string    `json:"email"`
 	Role      string    `json:"role"`
-	Password  string    `json:"password"`
 	CreatedAt time.Time `json:"created_at"`
+}
+type Session struct {
+	ID        uuid.UUID `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	Name      string    `json:"name"`
+	UserID    uuid.UUID `json:"user_id"`
+	Status    string    `json:"status"`
 }

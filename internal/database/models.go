@@ -57,6 +57,7 @@ type Session struct {
 	CreatedAt time.Time
 	Name      string
 	UserID    uuid.UUID
+	Status    string
 }
 
 type User struct {

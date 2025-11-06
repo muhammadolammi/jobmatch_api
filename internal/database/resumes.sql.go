@@ -25,8 +25,6 @@ INSERT INTO resumes (
 file_name, text, session_id)
 VALUES ( $1, $2, $3)
 
-ON CONFLICT (session_id)
-DO UPDATE SET text = EXCLUDED.text
 RETURNING id, file_name, text, created_at, session_id
 `
 

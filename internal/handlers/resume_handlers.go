@@ -23,128 +23,102 @@ func HelloReady(w http.ResponseWriter, r *http.Request) { helpers.RespondWithJso
 func ErrorReady(w http.ResponseWriter, r *http.Request) {
 	helpers.RespondWithError(w, 200, "this is an error test")
 }
+func (apiConfig *Config) UploadHandler(w http.ResponseWriter, r *http.Request, user User) {
+	const (
+		MaxUploadSize  = 20 << 20 // 20MB
+		MaxMemoryUsage = 10 << 20 // 10MB
+	)
 
-func (apiConfig *Config) UploadHandler(w http.ResponseWriter, r *http.Request) {
-
-	r.Body = http.MaxBytesReader(w, r.Body, 20<<20)
-	// Parse up to 10MB of file parts kept in memory before writing to temp files
-	err := r.ParseMultipartForm(10 << 20)
-	if err != nil {
-		http.Error(w, "Error parsing multipart form: "+err.Error(), http.StatusBadRequest)
+	r.Body = http.MaxBytesReader(w, r.Body, MaxUploadSize)
+	if err := r.ParseMultipartForm(MaxMemoryUsage); err != nil {
+		helpers.RespondWithError(w, http.StatusBadRequest, "Invalid multipart form: "+err.Error())
 		return
 	}
-	session_id := r.FormValue("session_id")
-	if session_id == "" {
+
+	sessionIDStr := r.FormValue("session_id")
+	if sessionIDStr == "" {
 		helpers.RespondWithError(w, http.StatusBadRequest, "Missing session_id in form data")
 		return
 	}
-	sessionId, err := uuid.Parse(session_id)
+	sessionID, err := uuid.Parse(sessionIDStr)
 	if err != nil {
-		msg := fmt.Sprintf("error parsing uuid from param. err: %v", err)
-		log.Println(msg)
-		helpers.RespondWithError(w, http.StatusInternalServerError, msg)
+		helpers.RespondWithError(w, http.StatusBadRequest, "Invalid session_id format")
 		return
 	}
-	result, err := apiConfig.DB.GetResultBySession(r.Context(), sessionId)
-	resultFound := false
-	if err != nil {
-		if !(err == sql.ErrNoRows) {
-			//  lets handle error that's not empty row
-			msg := fmt.Sprintf("Error check result, err: %v", err)
 
-			log.Println(msg)
-			helpers.RespondWithError(w, http.StatusInternalServerError, msg)
-			return
-		}
-
+	result, err := apiConfig.DB.GetResultBySession(r.Context(), sessionID)
+	if err != nil && err != sql.ErrNoRows {
+		log.Println("DB error:", err)
+		helpers.RespondWithError(w, http.StatusInternalServerError, "Internal server error")
+		return
 	}
-	if result.ID != uuid.Nil {
-		resultFound = true
-	}
-	if resultFound {
-		// 	if time.Since(result.CreatedAt) < 24*time.Hour {
 
-		if time.Since(result.CreatedAt) < 1*time.Hour {
-
-			remaining := 1*time.Hour - time.Since(result.CreatedAt)
-			msg := fmt.Sprintf("You have already analyzed a resume recently. Please wait %.0f minutes before trying again.", remaining.Minutes())
-			helpers.RespondWithJson(w, http.StatusTooManyRequests, map[string]any{
-				"error":            "rate_limit_exceeded",
-				"message":          msg,
-				"retry_in_minutes": int(remaining.Minutes()),
-			})
-			return
-		}
+	if result.ID != uuid.Nil && time.Since(result.CreatedAt) < time.Hour {
+		remaining := time.Hour - time.Since(result.CreatedAt)
+		helpers.RespondWithJson(w, http.StatusTooManyRequests, map[string]any{
+			"error":            "rate_limit_exceeded",
+			"message":          fmt.Sprintf("Please wait %.0f minutes before trying again.", remaining.Minutes()),
+			"retry_in_minutes": int(remaining.Minutes()),
+		})
+		return
 	}
+
 	files := r.MultipartForm.File["file"]
 	if len(files) == 0 {
-
 		helpers.RespondWithError(w, http.StatusBadRequest, "No file uploaded")
 		return
 	}
-
 	if len(files) > 1 {
-
 		helpers.RespondWithError(w, http.StatusBadRequest, "Only one file allowed")
 		return
 	}
-	// Step 4.1: get the original filename
-	fileHeader := files[0]
-	filename := fileHeader.Filename
-	filename = filepath.Base(filename)
 
-	log.Println("Processing file:", filename)
+	errorMsgs := []string{}
+	for _, fh := range files {
+		file, err := fh.Open()
+		if err != nil {
+			errorMsgs = append(errorMsgs, "Could not open file: "+fh.Filename)
+			continue
+		}
+		defer file.Close()
 
-	// Step 4.2: open the uploaded file
-	file, err := fileHeader.Open()
-	if err != nil {
-		msg := fmt.Sprintf("Error opening file: %v, err: %v", filename, err)
-		log.Println(msg)
+		ext := strings.ToLower(filepath.Ext(fh.Filename))
+		if !map[string]bool{".pdf": true, ".docx": true, ".txt": true}[ext] {
+			errorMsgs = append(errorMsgs, "Invalid file type: "+fh.Filename)
+			continue
+		}
 
-		helpers.RespondWithError(w, http.StatusInternalServerError, msg)
+		data, err := io.ReadAll(file)
+		if err != nil {
+			errorMsgs = append(errorMsgs, "Failed reading file: "+fh.Filename)
+			continue
+		}
+
+		encoded := base64.StdEncoding.EncodeToString(data)
+		if _, err := apiConfig.DB.CreateResume(r.Context(), database.CreateResumeParams{
+			FileName:  filepath.Base(fh.Filename),
+			Text:      encoded,
+			SessionID: sessionID,
+		}); err != nil {
+			log.Println("DB error creating resume:", err)
+			errorMsgs = append(errorMsgs, "Internal error processing "+fh.Filename)
+			continue
+		}
+	}
+
+	if len(errorMsgs) > 0 {
+		status := http.StatusOK
+		if len(errorMsgs) == len(files) {
+			status = http.StatusBadRequest
+		}
+		helpers.RespondWithJson(w, status, map[string]any{
+			"message": "Upload completed with some errors",
+			"errors":  errorMsgs,
+		})
 		return
 	}
 
-	// Check file extension
-	ext := strings.ToLower(filepath.Ext(filename))
-	allowed := map[string]bool{".pdf": true, ".docx": true, ".txt": true}
-	if !allowed[ext] {
-		msg := fmt.Sprintf("Invalid file type: %v", filename)
-		log.Println(msg)
-		helpers.RespondWithError(w, http.StatusInternalServerError, msg)
-		return
-
-	}
-
-	data, err := io.ReadAll(file)
-	file.Close()
-	if err != nil {
-		msg := fmt.Sprintf("Error reading file:%v , err: %v", filename, err)
-		log.Println(msg)
-		helpers.RespondWithError(w, http.StatusInternalServerError, msg)
-		return
-
-	}
-
-	log.Printf("Read %d bytes from %s\n", len(data), filename)
-	//  save data to db
-	encoded := base64.StdEncoding.EncodeToString(data)
-
-	_, err = apiConfig.DB.CreateResume(r.Context(), database.CreateResumeParams{
-		FileName:  filename,
-		Text:      encoded,
-		SessionID: sessionId,
-	})
-	if err != nil {
-		msg := fmt.Sprintf("error uploading files. filename: %v, err: %v\n", filename, err)
-		log.Println(msg)
-		helpers.RespondWithError(w, http.StatusInternalServerError, msg)
-		return
-	}
-	helpers.RespondWithJson(w, http.StatusOK, map[string]string{
-		"message": "Upload successful",
-	})
-
+	helpers.RespondWithJson(w, http.StatusOK, map[string]string{"message": "Upload successful"})
 }
 
 func (apiConfig *Config) AnalyzeHandler(w http.ResponseWriter, r *http.Request) {
