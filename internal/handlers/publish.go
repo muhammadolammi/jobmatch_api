@@ -8,8 +8,8 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func (config *Config) PublishSession(session Session) error {
-	conn, err := amqp.Dial(config.RABBITMQUrl)
+func (apiConfig *Config) PublishSession(session Session) error {
+	conn, err := amqp.Dial(apiConfig.RABBITMQUrl)
 	if err != nil {
 		return fmt.Errorf("error connecting to RabbitMQ. err:  %v", err)
 

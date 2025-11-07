@@ -7,9 +7,10 @@ CREATE TABLE employer_profiles (
     company_industry TEXT  NOT NULL,
 
     user_id UUID UNIQUE NOT NULL,
-   constraint fk_jemployer_profiles_users
+   constraint fk_employer_profiles_users
     foreign key (user_id) 
     REFERENCES users(id)
+    ON DELETE CASCADE
 );
 
 -- +goose Down

@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"encoding/json"
+
 	"github.com/muhammadolammi/jobmatchapi/internal/database"
 )
 
@@ -43,4 +45,18 @@ func DbSessionsToModelsSessions(dbSessions []database.Session) []Session {
 		sessions = append(sessions, DbSessionToModelsSession(dbSession))
 	}
 	return sessions
+}
+
+// User model helpers
+func DbAnalysesResultToModelsAnalysesResults(dbAnalysesResults database.AnalysesResult) AnalysesResults {
+	results := []AnalysesResult{}
+	json.Unmarshal(dbAnalysesResults.Results, &results)
+	return AnalysesResults{
+		ID:        dbAnalysesResults.ID,
+		Results:   results,
+		SessionID: dbAnalysesResults.SessionID,
+		CreatedAt: dbAnalysesResults.CreatedAt,
+		UpdatedAt: dbAnalysesResults.UpdatedAt,
+	}
+
 }

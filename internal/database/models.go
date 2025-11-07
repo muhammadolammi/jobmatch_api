@@ -12,6 +12,14 @@ import (
 	"github.com/google/uuid"
 )
 
+type AnalysesResult struct {
+	ID        uuid.UUID
+	SessionID uuid.UUID
+	Results   json.RawMessage
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type EmployerProfile struct {
 	ID              uuid.UUID
 	CompanyName     string
@@ -35,13 +43,6 @@ type RefreshToken struct {
 	Token     string
 	ExpiresAt time.Time
 	CreatedAt time.Time
-}
-
-type Result struct {
-	ID        uuid.UUID
-	Result    json.RawMessage
-	CreatedAt time.Time
-	SessionID uuid.UUID
 }
 
 type Resume struct {

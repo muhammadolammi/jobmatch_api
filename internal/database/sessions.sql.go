@@ -13,18 +13,25 @@ import (
 
 const createSession = `-- name: CreateSession :one
 INSERT INTO sessions (
-name, user_id )
-VALUES ( $1, $2)
+name, user_id, job_title, job_description )
+VALUES ( $1, $2, $3,$4)
 RETURNING id, created_at, name, user_id, status, job_title, job_description
 `
 
 type CreateSessionParams struct {
-	Name   string
-	UserID uuid.UUID
+	Name           string
+	UserID         uuid.UUID
+	JobTitle       string
+	JobDescription string
 }
 
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error) {
-	row := q.db.QueryRowContext(ctx, createSession, arg.Name, arg.UserID)
+	row := q.db.QueryRowContext(ctx, createSession,
+		arg.Name,
+		arg.UserID,
+		arg.JobTitle,
+		arg.JobDescription,
+	)
 	var i Session
 	err := row.Scan(
 		&i.ID,

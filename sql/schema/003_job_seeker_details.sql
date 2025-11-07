@@ -8,6 +8,7 @@ CREATE TABLE job_seeker_profiles (
     constraint fk_job_seeker_profiles_users
     foreign key (user_id) 
     REFERENCES users(id)
+    ON DELETE CASCADE
 );
 
 -- +goose Down

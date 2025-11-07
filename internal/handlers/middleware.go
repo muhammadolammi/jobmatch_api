@@ -48,7 +48,7 @@ func (apiConfig *Config) AuthMiddleware(next func(http.ResponseWriter, *http.Req
 		)
 
 		if err != nil {
-			helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error parsing jwt claims, err: %v", err))
+			helpers.RespondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error parsing jwt claims, err: %v", err))
 			return
 		}
 
@@ -59,17 +59,17 @@ func (apiConfig *Config) AuthMiddleware(next func(http.ResponseWriter, *http.Req
 
 		userId, err := authJwt.Claims.GetIssuer()
 		if err != nil {
-			helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error getting issuer from jwt claims, err: %v", err))
+			helpers.RespondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error getting issuer from jwt claims, err: %v", err))
 			return
 		}
 		id, err := uuid.Parse(userId)
 		if err != nil {
-			helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error parsing id, err: %v", err))
+			helpers.RespondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error parsing id, err: %v", err))
 			return
 		}
 		user, err := apiConfig.DB.GetUser(r.Context(), id)
 		if err != nil {
-			helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error getting user, err: %v", err))
+			helpers.RespondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error getting user, err: %v", err))
 			return
 		}
 		next(w, r, DbUserToModelsUser(user))

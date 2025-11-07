@@ -75,14 +75,14 @@ func (apiConfig *Config) GetResultHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	result, err := apiConfig.DB.GetResultBySession(r.Context(), sessionId)
+	result, err := apiConfig.DB.GetAnalysesResultsBySession(r.Context(), sessionId)
 	if err != nil {
 		msg := fmt.Sprintf("error getting result for session. err: %v", err)
 		log.Println(msg)
 		helpers.RespondWithError(w, http.StatusInternalServerError, msg)
 		return
 	}
-	helpers.RespondWithJson(w, 200, result.Result)
+	helpers.RespondWithJson(w, 200, DbAnalysesResultToModelsAnalysesResults(result))
 }
 
 func (apiConfig *Config) PresignUploadHandler(w http.ResponseWriter, r *http.Request, user User) {
@@ -134,7 +134,7 @@ func (apiConfig *Config) PresignUploadHandler(w http.ResponseWriter, r *http.Req
 
 }
 
-func (api *Config) UploadCompleteHandler(w http.ResponseWriter, r *http.Request, user User) {
+func (apiConfig *Config) UploadCompleteHandler(w http.ResponseWriter, r *http.Request, user User) {
 	var body struct {
 		SessionID  string `json:"session_id"`
 		ObjectKey  string `json:"object_key"`
@@ -173,7 +173,7 @@ func (api *Config) UploadCompleteHandler(w http.ResponseWriter, r *http.Request,
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error parsing uuid. err: %v", err))
 		return
 	}
-	_, err = api.DB.CreateResume(r.Context(), database.CreateResumeParams{
+	_, err = apiConfig.DB.CreateResume(r.Context(), database.CreateResumeParams{
 		SessionID:        sessionUUid,
 		ObjectKey:        body.ObjectKey,
 		OriginalFilename: body.Filename,

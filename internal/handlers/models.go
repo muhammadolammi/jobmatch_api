@@ -2,23 +2,35 @@ package handlers
 
 import (
 	"database/sql"
-	"encoding/json"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/google/uuid"
 	"github.com/muhammadolammi/jobmatchapi/internal/database"
+	"github.com/muhammadolammi/jobmatchapi/internal/sse"
+	"google.golang.org/adk/runner"
+	"google.golang.org/adk/session"
 )
 
 type Config struct {
-	DB           *database.Queries
-	JwtKey       string
-	ClientApiKey string
-	Port         string
-	GeminiApiKey string
-	R2           *R2Config
-	AwsConfig    *aws.Config
-	RABBITMQUrl  string
+	DB                 *database.Queries
+	JwtKey             string
+	ClientApiKey       string
+	Port               string
+	R2                 *R2Config
+	AwsConfig          *aws.Config
+	RABBITMQUrl        string
+	SessionBroadcaster *sse.Broadcaster
+}
+type WorkerConfig struct {
+	DB                  *database.Queries
+	GeminiApiKey        string
+	R2                  *R2Config
+	AwsConfig           *aws.Config
+	RABBITMQUrl         string
+	SessionBroadcaster  *sse.Broadcaster
+	AgentRunner         *runner.Runner
+	AgentSessionService session.Service
 }
 
 type EmployerProfile struct {
@@ -44,13 +56,6 @@ type RefreshToken struct {
 	Token     string
 	ExpiresAt time.Time
 	CreatedAt time.Time
-}
-
-type Result struct {
-	ID        uuid.UUID
-	Result    json.RawMessage
-	CreatedAt time.Time
-	SessionID uuid.UUID
 }
 
 type Resume struct {
@@ -93,4 +98,24 @@ type R2Config struct {
 
 type PublishPayload struct {
 	SessionID uuid.UUID `json:"session_d"`
+}
+
+type AnalysesResult struct {
+	CandidateEmail      string   `json:"candidate_email"`
+	MatchScore          int      `json:"match_score"`
+	RelevantExperiences []string `json:"relevant_experiences"`
+	RelevantSkills      []string `json:"relevant_skills"`
+	MissingSkills       []string `json:"missing_skills"`
+	Summary             string   `json:"summary"`
+	Reccomendation      string   `json:"recommendation"`
+	// Error result entry
+	IsErrorResult bool   `json:"is_error_result"`
+	Error         string `json:"error,omitempty"`
+}
+type AnalysesResults struct {
+	ID        uuid.UUID        `json:"id"`
+	Results   []AnalysesResult `json:"results" db:"results"`
+	CreatedAt time.Time        `json:"created_at"`
+	SessionID uuid.UUID        `json:"session_id"`
+	UpdatedAt time.Time        `json:"updated_at"`
 }

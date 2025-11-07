@@ -15,5 +15,7 @@ DELETE  FROM resumes;
 -- name: DeleteResumesBySession :exec
 DELETE  FROM resumes WHERE session_id=$1;
 
--- name: DeleteResumesBySession :exec
+
+-- name: GetResumesBySession :many 
+SELECT * FROM resumes WHERE session_id=$1;
 

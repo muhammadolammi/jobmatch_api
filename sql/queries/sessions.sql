@@ -1,7 +1,7 @@
 -- name: CreateSession :one
 INSERT INTO sessions (
-name, user_id )
-VALUES ( $1, $2)
+name, user_id, job_title, job_description )
+VALUES ( $1, $2, $3,$4)
 RETURNING *;
 
 -- name: GetUserSessions :many

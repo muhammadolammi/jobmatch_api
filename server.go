@@ -46,8 +46,8 @@ func server(apiConfig *handlers.Config) {
 	// session
 	apiRoute.Post("/sessions", apiConfig.AuthMiddleware(apiConfig.CreateSession))
 	apiRoute.Post("/sessions/{id}/presign", apiConfig.AuthMiddleware(apiConfig.PresignUploadHandler))
-
 	apiRoute.Get("/sessions", apiConfig.AuthMiddleware(apiConfig.GetSessions))
+	apiRoute.Get("/sessions/{id}/updates", apiConfig.HandleSessionUpdates)
 
 	// analyze
 	apiRoute.Post("/uploads/complete", apiConfig.AuthMiddleware(apiConfig.UploadCompleteHandler))
