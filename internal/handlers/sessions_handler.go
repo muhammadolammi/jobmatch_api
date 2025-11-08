@@ -65,7 +65,7 @@ func (apiConfig *Config) GetSessions(w http.ResponseWriter, r *http.Request, use
 	helpers.RespondWithJson(w, http.StatusOK, DbSessionsToModelsSessions(sessions))
 }
 
-func (apiConfig *Config) HandleSessionUpdates(w http.ResponseWriter, r *http.Request) {
+func (apiConfig *Config) HandleSessionUpdates(w http.ResponseWriter, r *http.Request, user User) {
 	sessionID := chi.URLParam(r, "id")
 
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -73,24 +73,77 @@ func (apiConfig *Config) HandleSessionUpdates(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Connection", "keep-alive")
 	flusher, ok := w.(http.Flusher)
 	if !ok {
-		helpers.RespondWithError(w, http.StatusInternalServerError, "Streaming unsupported")
+		http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
 		return
 	}
-	// Send a ping to open the stream immediately
-	fmt.Fprintf(w, "data: %s\n\n", `{"status":"connected"}`)
 
-	updates := make(chan string)
-	// Register this client with a global session broadcaster
-	apiConfig.SessionBroadcaster.Register(sessionID, updates)
-	defer apiConfig.SessionBroadcaster.Unregister(sessionID, updates)
-	// Keep connection open and stream messages
+	// Consume RabbitMQ queue
+	ch, err := apiConfig.RabbitConn.Channel()
+	if err != nil {
+		http.Error(w, "Failed to connect to RabbitMQ", http.StatusInternalServerError)
+		return
+	}
+	defer ch.Close()
+
+	// Declare topic exchange
+	err = ch.ExchangeDeclare(
+		"session_updates",
+		"topic",
+		true,
+		false,
+		false,
+		false,
+		nil,
+	)
+	if err != nil {
+		http.Error(w, "Failed to declare exchange", http.StatusInternalServerError)
+		return
+	}
+	// Create a temporary queue for this SSE connection
+	q, err := ch.QueueDeclare(
+		"",    // empty name = let RabbitMQ generate unique name
+		false, // durable
+		true,  // delete when unused
+		true,  // exclusive
+		false,
+		nil,
+	)
+	if err != nil {
+		http.Error(w, "Failed to declare queue", http.StatusInternalServerError)
+		return
+	}
+
+	// Bind queue to this session's routing key
+	routingKey := fmt.Sprintf("session.%s", sessionID)
+	err = ch.QueueBind(q.Name, routingKey, "session_updates", false, nil)
+	if err != nil {
+		http.Error(w, "Failed to bind queue", http.StatusInternalServerError)
+		return
+	}
+
+	msgs, err := ch.Consume(
+		q.Name,
+		"",
+		true,  // auto-ack
+		false, // exclusive
+		false, // no-local
+		false, // no-wait
+		nil,
+	)
+	if err != nil {
+		http.Error(w, "Failed to consume queue", http.StatusInternalServerError)
+		return
+	}
+
+	// log.Println("logging sse")
 	ctx := r.Context()
 	for {
 		select {
 		case <-ctx.Done():
-			return // client closed connection
-		case msg := <-updates:
-			fmt.Fprintf(w, "data: %s\n\n", msg)
+			return
+		case d := <-msgs:
+			// log.Println(string(d.Body))
+			fmt.Fprintf(w, "data: %s\n\n", d.Body)
 			flusher.Flush()
 		}
 	}

@@ -56,7 +56,7 @@ func (apiConfig *Config) AnalyzeHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// publish the session
-	err = apiConfig.PublishSession(DbSessionToModelsSession(session))
+	err = apiConfig.PublishSession(DbSessionToModelsSession(session), apiConfig.RabbitConn)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, "error queing session. err: "+err.Error())
 		return
@@ -152,6 +152,28 @@ func (apiConfig *Config) UploadCompleteHandler(w http.ResponseWriter, r *http.Re
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error parsing uuid. err: %v", err))
 		return
+	}
+	// If user is job seeker just update the resume for that session and create one if session has no resume
+	resumeExists, _ := apiConfig.DB.ResumeExists(r.Context(), sessionUUid)
+	if user.Role == "job_seeker" && resumeExists {
+		err = apiConfig.DB.UpdateResumeStorageUrlForSession(r.Context(), database.UpdateResumeStorageUrlForSessionParams{
+			StorageUrl:       body.StorageUrl,
+			ObjectKey:        body.ObjectKey,
+			OriginalFilename: body.Filename,
+			Mime:             body.MimeType,
+			SizeBytes:        body.Size,
+			StorageProvider:  "r2",
+			UploadStatus:     "uploaded",
+		})
+		if err != nil {
+			helpers.RespondWithError(w, http.StatusInternalServerError, "db err: "+err.Error())
+			log.Println(err)
+			return
+		}
+
+		helpers.RespondWithJson(w, http.StatusCreated, "")
+		return
+
 	}
 	_, err = apiConfig.DB.CreateResume(r.Context(), database.CreateResumeParams{
 		SessionID:        sessionUUid,
