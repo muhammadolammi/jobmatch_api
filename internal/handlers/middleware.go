@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/muhammadolammi/jobmatchapi/internal/database"
 	"github.com/muhammadolammi/jobmatchapi/internal/helpers"
 )
 
@@ -57,14 +59,12 @@ func (apiConfig *Config) AuthMiddleware(next func(http.ResponseWriter, *http.Req
 		}
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		authclaims := &jwt.RegisteredClaims{}
-		authJwt, err := jwt.ParseWithClaims(
-			tokenString,
-			authclaims,
-			func(token *jwt.Token) (interface{}, error) { return []byte(apiConfig.JwtKey), nil },
-		)
 
+		authJwt, err := jwt.ParseWithClaims(tokenString, authclaims, func(token *jwt.Token) (interface{}, error) {
+			return []byte(apiConfig.JwtKey), nil
+		})
 		if err != nil {
-			helpers.RespondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error parsing jwt claims, err: %v", err))
+			helpers.RespondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error parsing jwt claims: %v", err))
 			return
 		}
 
@@ -75,19 +75,55 @@ func (apiConfig *Config) AuthMiddleware(next func(http.ResponseWriter, *http.Req
 
 		userId, err := authJwt.Claims.GetIssuer()
 		if err != nil {
-			helpers.RespondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error getting issuer from jwt claims, err: %v", err))
+			helpers.RespondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error getting issuer: %v", err))
 			return
 		}
+
 		id, err := uuid.Parse(userId)
 		if err != nil {
-			helpers.RespondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error parsing id, err: %v", err))
+			helpers.RespondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error parsing id: %v", err))
 			return
 		}
+
 		user, err := apiConfig.DB.GetUser(r.Context(), id)
 		if err != nil {
-			helpers.RespondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error getting user, err: %v", err))
+			helpers.RespondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error getting user: %v", err))
 			return
 		}
+		//serve for admin without rate limiting
+		if user.Role == "admin" {
+			next(w, r, DbUserToModelsUser(user))
+		}
+		// ✅ Rate limit check
+		usage, err := apiConfig.DB.GetUserUsage(r.Context(), user.ID)
+		now := time.Now()
+
+		if err == sql.ErrNoRows {
+			_ = apiConfig.DB.InsertUserUsage(r.Context(), database.InsertUserUsageParams{
+				UserID:   user.ID,
+				MaxDaily: int32(apiConfig.RateLimit),
+			})
+		} else if err != nil {
+			helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error checking usage: %v", err))
+			return
+		} else {
+			if now.Sub(usage.LastUsedAt) < 24*time.Hour {
+				if usage.Count >= usage.MaxDaily {
+					helpers.RespondWithError(w, http.StatusTooManyRequests, "daily usage limit reached")
+					return
+				}
+				_ = apiConfig.DB.UpdateUserUsageCount(r.Context(), database.UpdateUserUsageCountParams{
+					UserID: user.ID,
+					Count:  usage.Count + 1,
+				})
+			} else {
+				_ = apiConfig.DB.UpdateUserUsageCount(r.Context(), database.UpdateUserUsageCountParams{
+					UserID: user.ID,
+					Count:  1,
+				})
+			}
+		}
+
 		next(w, r, DbUserToModelsUser(user))
 	})
 }

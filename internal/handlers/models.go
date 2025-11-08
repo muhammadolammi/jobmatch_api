@@ -21,6 +21,7 @@ type Config struct {
 	RabbitConn                 *amqp.Connection
 	RefreshTokenEXpirationTime int //in minute
 	AcessTokenEXpirationTime   int //in minute
+	RateLimit                  int
 }
 
 type EmployerProfile struct {
