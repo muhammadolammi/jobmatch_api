@@ -7,9 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/google/uuid"
 	"github.com/muhammadolammi/jobmatchapi/internal/database"
-	"github.com/muhammadolammi/jobmatchapi/internal/sse"
-	"google.golang.org/adk/runner"
-	"google.golang.org/adk/session"
+	"github.com/streadway/amqp"
 )
 
 type Config struct {
@@ -20,20 +18,9 @@ type Config struct {
 	R2                         *R2Config
 	AwsConfig                  *aws.Config
 	RABBITMQUrl                string
-	SessionBroadcaster         *sse.Broadcaster
+	RabbitConn                 *amqp.Connection
 	RefreshTokenEXpirationTime int //in minute
 	AcessTokenEXpirationTime   int //in minute
-}
-type WorkerConfig struct {
-	DB *database.Queries
-	// GoogleApiKey        string
-	R2                  *R2Config
-	AwsConfig           *aws.Config
-	RABBITMQUrl         string
-	SessionBroadcaster  *sse.Broadcaster
-	AgentRunner         *runner.Runner
-	AgentSessionService session.Service
-	AgentName           string
 }
 
 type EmployerProfile struct {

@@ -3,18 +3,13 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/streadway/amqp"
 )
 
-func (apiConfig *Config) PublishSession(session Session) error {
-	conn, err := amqp.Dial(apiConfig.RABBITMQUrl)
-	if err != nil {
-		return fmt.Errorf("error connecting to RabbitMQ. err:  %v", err)
+func (apiConfig *Config) PublishSession(session Session, rabbitConn *amqp.Connection) error {
 
-	}
-	ch, err := conn.Channel()
+	ch, err := rabbitConn.Channel()
 	if err != nil {
 		return fmt.Errorf("error getting connection channel. err: %v", err)
 
@@ -52,7 +47,7 @@ func (apiConfig *Config) PublishSession(session Session) error {
 		return fmt.Errorf("error publishing session. err: %v", err)
 
 	}
-	log.Println("session saved to db and published")
+	// log.Println("session saved to db and published")
 	return nil
 
 }

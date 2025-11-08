@@ -12,7 +12,7 @@ import (
 	_ "github.com/lib/pq"
 	"github.com/muhammadolammi/jobmatchapi/internal/database"
 	"github.com/muhammadolammi/jobmatchapi/internal/handlers"
-	"github.com/muhammadolammi/jobmatchapi/internal/sse"
+	"github.com/streadway/amqp"
 )
 
 func main() {
@@ -74,8 +74,6 @@ func main() {
 		log.Fatal("error creating aws config", err)
 	}
 
-	sessionBroadcaster := sse.NewBroadcaster()
-
 	//  we assume its api mode if no runmode is provider
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -89,6 +87,11 @@ func main() {
 	if jwtKey == "" {
 		log.Fatal("empty JWT_KEY in environment")
 	}
+	conn, err := amqp.Dial(rabbitmqUrl)
+	if err != nil {
+		log.Fatalf("error connecting to RabbitMQ. err:  %v", err)
+
+	}
 	apiConfig := handlers.Config{
 		DB:                         dbqueries,
 		RABBITMQUrl:                rabbitmqUrl,
@@ -97,9 +100,9 @@ func main() {
 		JwtKey:                     jwtKey,
 		R2:                         &r2Config,
 		AwsConfig:                  &awsConfig,
-		SessionBroadcaster:         sessionBroadcaster,
 		RefreshTokenEXpirationTime: 60 * 24 * 7, //7 days
 		AcessTokenEXpirationTime:   15,
+		RabbitConn:                 conn,
 	}
 	server(&apiConfig)
 }

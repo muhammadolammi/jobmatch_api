@@ -49,7 +49,7 @@ func server(apiConfig *handlers.Config) {
 	apiRoute.Get("/sessions", apiConfig.AuthMiddleware(apiConfig.GetSessions))
 	apiRoute.Get("/sessions/{id}", apiConfig.AuthMiddleware(apiConfig.GetSession))
 
-	apiRoute.Get("/sessions/{id}/updates", apiConfig.HandleSessionUpdates)
+	apiRoute.Get("/sessions/sse/{id}/updates", apiConfig.AuthMiddleware(apiConfig.HandleSessionUpdates))
 
 	// analyze
 	apiRoute.Post("/uploads/complete", apiConfig.AuthMiddleware(apiConfig.UploadCompleteHandler))

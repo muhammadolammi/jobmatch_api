@@ -133,3 +133,52 @@ func (q *Queries) GetResumesBySession(ctx context.Context, sessionID uuid.UUID) 
 	}
 	return items, nil
 }
+
+const resumeExists = `-- name: ResumeExists :one
+SELECT EXISTS (
+    SELECT 1
+    FROM resumes
+    WHERE session_id = $1
+)
+`
+
+func (q *Queries) ResumeExists(ctx context.Context, sessionID uuid.UUID) (bool, error) {
+	row := q.db.QueryRowContext(ctx, resumeExists, sessionID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
+const updateResumeStorageUrlForSession = `-- name: UpdateResumeStorageUrlForSession :exec
+UPDATE resumes
+SET 
+  storage_url = $1,
+   object_key=$2,
+   original_filename=$3, mime=$4, size_bytes=$5, storage_provider=$6, upload_status=$7 
+WHERE session_id = $8
+`
+
+type UpdateResumeStorageUrlForSessionParams struct {
+	StorageUrl       string
+	ObjectKey        string
+	OriginalFilename string
+	Mime             string
+	SizeBytes        int64
+	StorageProvider  string
+	UploadStatus     string
+	SessionID        uuid.UUID
+}
+
+func (q *Queries) UpdateResumeStorageUrlForSession(ctx context.Context, arg UpdateResumeStorageUrlForSessionParams) error {
+	_, err := q.db.ExecContext(ctx, updateResumeStorageUrlForSession,
+		arg.StorageUrl,
+		arg.ObjectKey,
+		arg.OriginalFilename,
+		arg.Mime,
+		arg.SizeBytes,
+		arg.StorageProvider,
+		arg.UploadStatus,
+		arg.SessionID,
+	)
+	return err
+}

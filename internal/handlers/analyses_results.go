@@ -27,5 +27,6 @@ func (apiConfig *Config) GetResultHandler(w http.ResponseWriter, r *http.Request
 		helpers.RespondWithError(w, http.StatusInternalServerError, msg)
 		return
 	}
+
 	helpers.RespondWithJson(w, 200, DbAnalysesResultToModelsAnalysesResults(result))
 }
