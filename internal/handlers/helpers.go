@@ -47,7 +47,7 @@ func DbSessionsToModelsSessions(dbSessions []database.Session) []Session {
 	return sessions
 }
 
-// User model helpers
+// AnalysesResult model helpers
 func DbAnalysesResultToModelsAnalysesResults(dbAnalysesResults database.AnalysesResult) AnalysesResults {
 	results := []AnalysesResult{}
 	json.Unmarshal(dbAnalysesResults.Results, &results)

@@ -45,7 +45,7 @@ func (apiConfig *Config) PublishSession(session Session) error {
 		false,  // mandatory
 		false,  // immediate
 		amqp.Publishing{
-			ContentType: "text/plain",
+			ContentType: "application/json",
 			Body:        body,
 		})
 	if err != nil {

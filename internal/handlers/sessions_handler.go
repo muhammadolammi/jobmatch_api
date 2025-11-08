@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
 	"github.com/muhammadolammi/jobmatchapi/internal/database"
 	"github.com/muhammadolammi/jobmatchapi/internal/helpers"
 )
@@ -93,4 +94,26 @@ func (apiConfig *Config) HandleSessionUpdates(w http.ResponseWriter, r *http.Req
 			flusher.Flush()
 		}
 	}
+}
+
+func (apiConfig *Config) GetSession(w http.ResponseWriter, r *http.Request, user User) {
+	sessionIDString := chi.URLParam(r, "id")
+	sessionID, err := uuid.Parse(sessionIDString)
+	if err != nil {
+		msg := fmt.Sprintf("error parsing session id. err: %v", err)
+		log.Println(msg)
+		helpers.RespondWithError(w, http.StatusInternalServerError, msg)
+		return
+
+	}
+
+	session, err := apiConfig.DB.GetSession(r.Context(), sessionID)
+	if err != nil {
+		msg := fmt.Sprintf("error getting session. err: %v", err)
+		log.Println(msg)
+		helpers.RespondWithError(w, http.StatusInternalServerError, msg)
+		return
+
+	}
+	helpers.RespondWithJson(w, http.StatusOK, DbSessionToModelsSession(session))
 }

@@ -198,14 +198,14 @@ func (apiConfig *Config) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// create refresh token
 
-	err = auth.CreateRefreshToken([]byte(apiConfig.JwtKey), user.ID, 24*7*6, w, apiConfig.DB)
+	err = auth.CreateRefreshToken([]byte(apiConfig.JwtKey), user.ID, apiConfig.RefreshTokenEXpirationTime, w, apiConfig.DB)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error creating refresh token. err: %v", err))
 		return
 	}
-	access_token, err := auth.MakeJwtTokenString([]byte(apiConfig.JwtKey), user.ID.String(), "access_token", 15)
+	access_token, err := auth.MakeJwtTokenString([]byte(apiConfig.JwtKey), user.ID.String(), "access_token", apiConfig.AcessTokenEXpirationTime)
 	if err != nil {
-		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error making jwt token. err: %v", err))
+		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error creating access token. err: %v", err))
 		return
 	}
 	response := struct {
@@ -316,7 +316,6 @@ func (apiConfig *Config) RefreshTokens(w http.ResponseWriter, r *http.Request) {
 	if !refreshTokenExists {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("refresh token doesnt exist. err: %v", err))
 		return
-
 	}
 	userIdString := refreshclaims.Issuer
 	userId, err := uuid.Parse(userIdString)
@@ -337,10 +336,21 @@ func (apiConfig *Config) RefreshTokens(w http.ResponseWriter, r *http.Request) {
 		helpers.RespondWithError(w, http.StatusUnauthorized, "refresh token expired")
 		return
 	}
-
-	access_token, err := auth.MakeJwtTokenString([]byte(apiConfig.JwtKey), user.ID.String(), "access_token", 15)
+	// invalidate current refresh token
+	err = apiConfig.DB.DeleteRefreshToken(context.Background(), refreshtoken.Value)
 	if err != nil {
-		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error making jwt token. err: %v", err))
+		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error invalidating refresh token, err: %v", err))
+		return
+	}
+	// make new refresh token
+	err = auth.CreateRefreshToken([]byte(apiConfig.JwtKey), userId, apiConfig.RefreshTokenEXpirationTime, w, apiConfig.DB)
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error creating refresh token, err: %v", err))
+		return
+	}
+	access_token, err := auth.MakeJwtTokenString([]byte(apiConfig.JwtKey), user.ID.String(), "access_token", apiConfig.AcessTokenEXpirationTime)
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error creating access token. err: %v", err))
 		return
 	}
 	response := struct {
@@ -350,7 +360,6 @@ func (apiConfig *Config) RefreshTokens(w http.ResponseWriter, r *http.Request) {
 		AccessToken: access_token,
 	}
 	helpers.RespondWithJson(w, 200, response)
-
 }
 
 func (apiConfig *Config) Validate(w http.ResponseWriter, r *http.Request) {

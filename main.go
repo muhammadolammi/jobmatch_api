@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"log"
 	"os"
 
@@ -11,31 +10,28 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
-	customagent "github.com/muhammadolammi/jobmatchapi/internal/agent"
 	"github.com/muhammadolammi/jobmatchapi/internal/database"
 	"github.com/muhammadolammi/jobmatchapi/internal/handlers"
 	"github.com/muhammadolammi/jobmatchapi/internal/sse"
-	"google.golang.org/adk/runner"
-	"google.golang.org/adk/session"
 )
 
 func main() {
 
 	_ = godotenv.Load()
+	environment := os.Getenv("ENV")
+	if environment == "" {
+		log.Fatal("empty ENV in environment")
+	}
+	if environment != "deployment" && environment != "development" {
+		log.Fatal("ENV can only be deployment or development. got: ", environment)
+
+	}
 
 	dbUrl := os.Getenv("DB_URL")
 	if dbUrl == "" {
 		log.Fatal("empty DB_URL in environment")
 	}
-	runMode := os.Getenv("RUN_MODE")
-	if runMode == "" {
-		log.Fatal("empty RUN_MODE in environment")
 
-	}
-	if runMode != "server" && runMode != "worker" {
-		log.Fatal("RUN_MODE can either be server or worker")
-
-	}
 	rabbitmqUrl := os.Getenv("RABBITMQ_URL")
 	if rabbitmqUrl == "" {
 		log.Fatal("empty RABBITMQ_URL in env")
@@ -80,73 +76,30 @@ func main() {
 
 	sessionBroadcaster := sse.NewBroadcaster()
 
-	if runMode == "server" {
-		//  we assume its api mode if no runmode is provider
-		port := os.Getenv("PORT")
-		if port == "" {
-			log.Fatal("empty PORT in environment")
-		}
-		clientApiKey := os.Getenv("CLIENT_API_KEY")
-		if clientApiKey == "" {
-			log.Fatal("empty CLIENT_API_KEY in environment")
-		}
-		jwtKey := os.Getenv("JWT_KEY")
-		if jwtKey == "" {
-			log.Fatal("empty JWT_KEY in environment")
-		}
-		apiConfig := handlers.Config{
-			DB:                 dbqueries,
-			RABBITMQUrl:        rabbitmqUrl,
-			Port:               port,
-			ClientApiKey:       clientApiKey,
-			JwtKey:             jwtKey,
-			R2:                 &r2Config,
-			AwsConfig:          &awsConfig,
-			SessionBroadcaster: sessionBroadcaster,
-		}
-		server(&apiConfig)
+	//  we assume its api mode if no runmode is provider
+	port := os.Getenv("PORT")
+	if port == "" {
+		log.Fatal("empty PORT in environment")
 	}
-	if runMode == "worker" {
-		geminiApiKey := os.Getenv("GEMINI_API_KEY")
-		if geminiApiKey == "" {
-			log.Fatal("empty GEMINI_API_KEY in env")
-		}
-
-		// create agent runner ctx := context.Background()
-		analyzer, err := customagent.GetAgent()
-		if err != nil {
-			log.Fatalf("failed to create agent: %w", err)
-		}
-
-		//  create session for ai use
-		// Create a session to examine its properties.
-		inMemoryService := session.InMemoryService()
-
-		if err != nil {
-			log.Fatalf("failed to create session: %v", err)
-		}
-
-		r, err := runner.New(runner.Config{
-			AppName:        analyzer.Name(),
-			Agent:          analyzer,
-			SessionService: inMemoryService,
-		})
-		if err != nil {
-			log.Fatalf("failed to create runner: %w", err)
-		}
-		workerConfig := handlers.WorkerConfig{
-			DB:                  dbqueries,
-			GeminiApiKey:        geminiApiKey,
-			R2:                  &r2Config,
-			AwsConfig:           &awsConfig,
-			RABBITMQUrl:         rabbitmqUrl,
-			SessionBroadcaster:  sessionBroadcaster,
-			AgentRunner:         r,
-			AgentSessionService: inMemoryService,
-		}
-
-		fmt.Println("Starting 3 workers consumer pool ")
-		workerConfig.StartConsumerWorkerPool(3)
+	clientApiKey := os.Getenv("CLIENT_API_KEY")
+	if clientApiKey == "" {
+		log.Fatal("empty CLIENT_API_KEY in environment")
 	}
-
+	jwtKey := os.Getenv("JWT_KEY")
+	if jwtKey == "" {
+		log.Fatal("empty JWT_KEY in environment")
+	}
+	apiConfig := handlers.Config{
+		DB:                         dbqueries,
+		RABBITMQUrl:                rabbitmqUrl,
+		Port:                       port,
+		ClientApiKey:               clientApiKey,
+		JwtKey:                     jwtKey,
+		R2:                         &r2Config,
+		AwsConfig:                  &awsConfig,
+		SessionBroadcaster:         sessionBroadcaster,
+		RefreshTokenEXpirationTime: 60 * 24 * 7, //7 days
+		AcessTokenEXpirationTime:   15,
+	}
+	server(&apiConfig)
 }

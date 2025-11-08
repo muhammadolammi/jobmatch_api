@@ -13,24 +13,27 @@ import (
 )
 
 type Config struct {
-	DB                 *database.Queries
-	JwtKey             string
-	ClientApiKey       string
-	Port               string
-	R2                 *R2Config
-	AwsConfig          *aws.Config
-	RABBITMQUrl        string
-	SessionBroadcaster *sse.Broadcaster
+	DB                         *database.Queries
+	JwtKey                     string
+	ClientApiKey               string
+	Port                       string
+	R2                         *R2Config
+	AwsConfig                  *aws.Config
+	RABBITMQUrl                string
+	SessionBroadcaster         *sse.Broadcaster
+	RefreshTokenEXpirationTime int //in minute
+	AcessTokenEXpirationTime   int //in minute
 }
 type WorkerConfig struct {
-	DB                  *database.Queries
-	GeminiApiKey        string
+	DB *database.Queries
+	// GoogleApiKey        string
 	R2                  *R2Config
 	AwsConfig           *aws.Config
 	RABBITMQUrl         string
 	SessionBroadcaster  *sse.Broadcaster
 	AgentRunner         *runner.Runner
 	AgentSessionService session.Service
+	AgentName           string
 }
 
 type EmployerProfile struct {
@@ -88,7 +91,6 @@ type PresignResponse struct {
 	Expiration int64  `json:"expiration"`
 }
 
-// Config you’ll have in your API struct
 type R2Config struct {
 	AccountID string
 	Bucket    string
@@ -107,7 +109,7 @@ type AnalysesResult struct {
 	RelevantSkills      []string `json:"relevant_skills"`
 	MissingSkills       []string `json:"missing_skills"`
 	Summary             string   `json:"summary"`
-	Reccomendation      string   `json:"recommendation"`
+	Recomendation       string   `json:"recommendation"`
 	// Error result entry
 	IsErrorResult bool   `json:"is_error_result"`
 	Error         string `json:"error,omitempty"`

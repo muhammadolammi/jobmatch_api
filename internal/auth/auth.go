@@ -41,7 +41,7 @@ func UpdateRefreshToken(signgingKey []byte, userId uuid.UUID, expirationTime int
 		Value:    jwtRefreshTokenString,
 		Expires:  expiresAt,
 		HttpOnly: true,
-		// Secure:   true,
+		Secure:   getSecureMode(),
 		SameSite: http.SameSiteStrictMode,
 	})
 	// save refresh to db
@@ -58,11 +58,13 @@ func UpdateRefreshToken(signgingKey []byte, userId uuid.UUID, expirationTime int
 	return nil
 }
 func CreateRefreshToken(signgingKey []byte, userId uuid.UUID, expirationTime int, w http.ResponseWriter, DB *database.Queries) error {
+
 	// create new jwt refresh token
 	jwtRefreshTokenString, err := MakeJwtTokenString(signgingKey, userId.String(), "refresh_token", expirationTime)
 	if err != nil {
 		return err
 	}
+
 	expiresAt := time.Now().UTC().Add(time.Duration(expirationTime) * time.Minute)
 	//  save to http cookie
 	http.SetCookie(w, &http.Cookie{
@@ -70,7 +72,7 @@ func CreateRefreshToken(signgingKey []byte, userId uuid.UUID, expirationTime int
 		Value:    jwtRefreshTokenString,
 		Expires:  expiresAt,
 		HttpOnly: true,
-		// Secure:   true,
+		Secure:   getSecureMode(),
 		SameSite: http.SameSiteStrictMode,
 	})
 	// save refresh to db
