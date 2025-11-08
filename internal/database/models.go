@@ -5,23 +5,73 @@
 package database
 
 import (
+	"database/sql"
 	"encoding/json"
 	"time"
 
 	"github.com/google/uuid"
 )
 
-type Result struct {
+type AnalysesResult struct {
 	ID        uuid.UUID
-	Result    json.RawMessage
-	SessionID string
+	SessionID uuid.UUID
+	Results   json.RawMessage
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+type EmployerProfile struct {
+	ID              uuid.UUID
+	CompanyName     string
+	CompanyWebsite  string
+	CompanySize     int32
+	CompanyIndustry string
+	UserID          uuid.UUID
+}
+
+type JobSeekerProfile struct {
+	ID        uuid.UUID
+	FirstName string
+	LastName  string
+	ResumeUrl sql.NullString
+	UserID    uuid.UUID
+}
+
+type RefreshToken struct {
+	ID        uuid.UUID
+	UserID    uuid.UUID
+	Token     string
+	ExpiresAt time.Time
 	CreatedAt time.Time
 }
 
 type Resume struct {
+	ID               uuid.UUID
+	OriginalFilename string
+	Mime             string
+	SizeBytes        int64
+	StorageProvider  string
+	ObjectKey        string
+	StorageUrl       string
+	UploadStatus     string
+	CreatedAt        time.Time
+	SessionID        uuid.UUID
+}
+
+type Session struct {
+	ID             uuid.UUID
+	CreatedAt      time.Time
+	Name           string
+	UserID         uuid.UUID
+	Status         string
+	JobTitle       string
+	JobDescription string
+}
+
+type User struct {
 	ID        uuid.UUID
-	FileName  string
-	Text      string
-	SessionID string
+	Email     string
+	Role      string
+	Password  string
 	CreatedAt time.Time
 }

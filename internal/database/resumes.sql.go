@@ -7,6 +7,8 @@ package database
 
 import (
 	"context"
+
+	"github.com/google/uuid"
 )
 
 const clearResumes = `-- name: ClearResumes :exec
@@ -19,30 +21,46 @@ func (q *Queries) ClearResumes(ctx context.Context) error {
 }
 
 const createResume = `-- name: CreateResume :one
-INSERT INTO resumes (
-file_name, text, session_id)
-VALUES ( $1, $2, $3)
+INSERT INTO resumes (session_id, object_key, original_filename, mime, size_bytes, storage_provider, upload_status, storage_url)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 
-ON CONFLICT (session_id)
-DO UPDATE SET text = EXCLUDED.text
-RETURNING id, file_name, text, session_id, created_at
+RETURNING id, original_filename, mime, size_bytes, storage_provider, object_key, storage_url, upload_status, created_at, session_id
 `
 
 type CreateResumeParams struct {
-	FileName  string
-	Text      string
-	SessionID string
+	SessionID        uuid.UUID
+	ObjectKey        string
+	OriginalFilename string
+	Mime             string
+	SizeBytes        int64
+	StorageProvider  string
+	UploadStatus     string
+	StorageUrl       string
 }
 
 func (q *Queries) CreateResume(ctx context.Context, arg CreateResumeParams) (Resume, error) {
-	row := q.db.QueryRowContext(ctx, createResume, arg.FileName, arg.Text, arg.SessionID)
+	row := q.db.QueryRowContext(ctx, createResume,
+		arg.SessionID,
+		arg.ObjectKey,
+		arg.OriginalFilename,
+		arg.Mime,
+		arg.SizeBytes,
+		arg.StorageProvider,
+		arg.UploadStatus,
+		arg.StorageUrl,
+	)
 	var i Resume
 	err := row.Scan(
 		&i.ID,
-		&i.FileName,
-		&i.Text,
-		&i.SessionID,
+		&i.OriginalFilename,
+		&i.Mime,
+		&i.SizeBytes,
+		&i.StorageProvider,
+		&i.ObjectKey,
+		&i.StorageUrl,
+		&i.UploadStatus,
 		&i.CreatedAt,
+		&i.SessionID,
 	)
 	return i, err
 }
@@ -51,13 +69,13 @@ const deleteResumesBySession = `-- name: DeleteResumesBySession :exec
 DELETE  FROM resumes WHERE session_id=$1
 `
 
-func (q *Queries) DeleteResumesBySession(ctx context.Context, sessionID string) error {
+func (q *Queries) DeleteResumesBySession(ctx context.Context, sessionID uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, deleteResumesBySession, sessionID)
 	return err
 }
 
 const getResumes = `-- name: GetResumes :one
-SELECT id, file_name, text, session_id, created_at FROM resumes
+SELECT id, original_filename, mime, size_bytes, storage_provider, object_key, storage_url, upload_status, created_at, session_id FROM resumes
 `
 
 func (q *Queries) GetResumes(ctx context.Context) (Resume, error) {
@@ -65,10 +83,53 @@ func (q *Queries) GetResumes(ctx context.Context) (Resume, error) {
 	var i Resume
 	err := row.Scan(
 		&i.ID,
-		&i.FileName,
-		&i.Text,
-		&i.SessionID,
+		&i.OriginalFilename,
+		&i.Mime,
+		&i.SizeBytes,
+		&i.StorageProvider,
+		&i.ObjectKey,
+		&i.StorageUrl,
+		&i.UploadStatus,
 		&i.CreatedAt,
+		&i.SessionID,
 	)
 	return i, err
+}
+
+const getResumesBySession = `-- name: GetResumesBySession :many
+SELECT id, original_filename, mime, size_bytes, storage_provider, object_key, storage_url, upload_status, created_at, session_id FROM resumes WHERE session_id=$1
+`
+
+func (q *Queries) GetResumesBySession(ctx context.Context, sessionID uuid.UUID) ([]Resume, error) {
+	rows, err := q.db.QueryContext(ctx, getResumesBySession, sessionID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Resume
+	for rows.Next() {
+		var i Resume
+		if err := rows.Scan(
+			&i.ID,
+			&i.OriginalFilename,
+			&i.Mime,
+			&i.SizeBytes,
+			&i.StorageProvider,
+			&i.ObjectKey,
+			&i.StorageUrl,
+			&i.UploadStatus,
+			&i.CreatedAt,
+			&i.SessionID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

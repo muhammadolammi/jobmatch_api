@@ -1,3 +1,3 @@
 
 
-go build -o jobmatch && ./jobmatch
+go build -o backend && ./backend
