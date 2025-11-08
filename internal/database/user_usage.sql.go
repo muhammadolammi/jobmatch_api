@@ -7,72 +7,69 @@ package database
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 )
 
 const getUserUsage = `-- name: GetUserUsage :one
-SELECT id, count, last_used_at, max_daily, user_id FROM user_usages WHERE user_id = $1 LIMIT 1
+SELECT user_id, count, max_daily, last_used_at FROM user_usages WHERE user_id = $1
 `
 
-func (q *Queries) GetUserUsage(ctx context.Context, userID uuid.UUID) (UserUsage, error) {
+type GetUserUsageRow struct {
+	UserID     uuid.UUID
+	Count      int32
+	MaxDaily   int32
+	LastUsedAt time.Time
+}
+
+func (q *Queries) GetUserUsage(ctx context.Context, userID uuid.UUID) (GetUserUsageRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserUsage, userID)
-	var i UserUsage
+	var i GetUserUsageRow
 	err := row.Scan(
-		&i.ID,
-		&i.Count,
-		&i.LastUsedAt,
-		&i.MaxDaily,
 		&i.UserID,
+		&i.Count,
+		&i.MaxDaily,
+		&i.LastUsedAt,
 	)
 	return i, err
 }
 
 const insertUserUsage = `-- name: InsertUserUsage :exec
-INSERT INTO user_usages (user_id, count, last_used_at, max_daily)
-VALUES ($1, 1, NOW(), $2)
-ON CONFLICT (user_id) DO UPDATE
-SET count = user_usages.count + 1, last_used_at = NOW()
+INSERT INTO user_usages (user_id, count, max_daily, last_used_at)
+VALUES ($1, $2, $3, $4)
 `
 
 type InsertUserUsageParams struct {
-	UserID   uuid.UUID
-	MaxDaily int32
+	UserID     uuid.UUID
+	Count      int32
+	MaxDaily   int32
+	LastUsedAt time.Time
 }
 
 func (q *Queries) InsertUserUsage(ctx context.Context, arg InsertUserUsageParams) error {
-	_, err := q.db.ExecContext(ctx, insertUserUsage, arg.UserID, arg.MaxDaily)
+	_, err := q.db.ExecContext(ctx, insertUserUsage,
+		arg.UserID,
+		arg.Count,
+		arg.MaxDaily,
+		arg.LastUsedAt,
+	)
 	return err
 }
 
-const updateUserMaxDaily = `-- name: UpdateUserMaxDaily :exec
+const updateUserUsage = `-- name: UpdateUserUsage :exec
 UPDATE user_usages
-SET max_daily = $1
-WHERE user_id = $2
-`
-
-type UpdateUserMaxDailyParams struct {
-	MaxDaily int32
-	UserID   uuid.UUID
-}
-
-func (q *Queries) UpdateUserMaxDaily(ctx context.Context, arg UpdateUserMaxDailyParams) error {
-	_, err := q.db.ExecContext(ctx, updateUserMaxDaily, arg.MaxDaily, arg.UserID)
-	return err
-}
-
-const updateUserUsageCount = `-- name: UpdateUserUsageCount :exec
-UPDATE user_usages
-SET count = $2, last_used_at = NOW()
+SET count = $2, last_used_at = $3
 WHERE user_id = $1
 `
 
-type UpdateUserUsageCountParams struct {
-	UserID uuid.UUID
-	Count  int32
+type UpdateUserUsageParams struct {
+	UserID     uuid.UUID
+	Count      int32
+	LastUsedAt time.Time
 }
 
-func (q *Queries) UpdateUserUsageCount(ctx context.Context, arg UpdateUserUsageCountParams) error {
-	_, err := q.db.ExecContext(ctx, updateUserUsageCount, arg.UserID, arg.Count)
+func (q *Queries) UpdateUserUsage(ctx context.Context, arg UpdateUserUsageParams) error {
+	_, err := q.db.ExecContext(ctx, updateUserUsage, arg.UserID, arg.Count, arg.LastUsedAt)
 	return err
 }

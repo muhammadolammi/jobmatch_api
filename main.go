@@ -103,7 +103,7 @@ func main() {
 		RefreshTokenEXpirationTime: 60 * 24 * 7, //7 days
 		AcessTokenEXpirationTime:   15,
 		RabbitConn:                 conn,
-		RateLimt:                   2, // lets just rate limit to 2 for now
+		RateLimit:                  2, // lets just rate limit to 2 for now
 	}
 	server(&apiConfig)
 }

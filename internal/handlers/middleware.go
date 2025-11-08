@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -57,77 +58,108 @@ func (apiConfig *Config) AuthMiddleware(next func(http.ResponseWriter, *http.Req
 			helpers.RespondWithError(w, http.StatusUnauthorized, "Missing or invalid token")
 			return
 		}
+
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		authclaims := &jwt.RegisteredClaims{}
 
 		authJwt, err := jwt.ParseWithClaims(tokenString, authclaims, func(token *jwt.Token) (interface{}, error) {
 			return []byte(apiConfig.JwtKey), nil
 		})
-		if err != nil {
-			helpers.RespondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error parsing jwt claims: %v", err))
+		if err != nil || !authJwt.Valid {
+			helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid or expired token")
 			return
 		}
 
 		if authclaims.ExpiresAt != nil && authclaims.ExpiresAt.Time.Before(time.Now().UTC()) {
-			helpers.RespondWithError(w, http.StatusUnauthorized, "auth token expired")
+			helpers.RespondWithError(w, http.StatusUnauthorized, "Token expired")
 			return
 		}
 
 		userId, err := authJwt.Claims.GetIssuer()
 		if err != nil {
-			helpers.RespondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error getting issuer: %v", err))
+			helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid token issuer")
 			return
 		}
 
 		id, err := uuid.Parse(userId)
 		if err != nil {
-			helpers.RespondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error parsing id: %v", err))
+			helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid user ID in token")
 			return
 		}
 
 		user, err := apiConfig.DB.GetUser(r.Context(), id)
 		if err != nil {
-			helpers.RespondWithError(w, http.StatusUnauthorized, fmt.Sprintf("error getting user: %v", err))
+			helpers.RespondWithError(w, http.StatusUnauthorized, "User not found")
 			return
 		}
-		//serve for admin without rate limiting
-		if user.Role == "admin" {
-			next(w, r, DbUserToModelsUser(user))
-		}
-		// ✅ Rate limit check
-		usage, err := apiConfig.DB.GetUserUsage(r.Context(), user.ID)
-		now := time.Now()
 
-		if err == sql.ErrNoRows {
-			_ = apiConfig.DB.InsertUserUsage(r.Context(), database.InsertUserUsageParams{
-				UserID:   user.ID,
-				MaxDaily: int32(apiConfig.RateLimit),
+		ctx := context.WithValue(r.Context(), "user", DbUserToModelsUser(user))
+		next(w, r.WithContext(ctx), DbUserToModelsUser(user))
+	})
+}
+func (apiConfig *Config) RateLimiter(
+	next func(http.ResponseWriter, *http.Request, User),
+) func(http.ResponseWriter, *http.Request, User) {
+	return func(w http.ResponseWriter, r *http.Request, user User) {
+		if user.Role == "admin" {
+			next(w, r, user)
+			return
+		}
+
+		now := time.Now()
+		usage, err := apiConfig.DB.GetUserUsage(r.Context(), user.ID)
+
+		switch {
+		// ✅ First-time usage
+		case err == sql.ErrNoRows:
+			err = apiConfig.DB.InsertUserUsage(r.Context(), database.InsertUserUsageParams{
+				UserID:     user.ID,
+				MaxDaily:   int32(apiConfig.RateLimit),
+				Count:      1,
+				LastUsedAt: now,
 			})
-		} else if err != nil {
+			if err != nil {
+				helpers.RespondWithError(w, http.StatusInternalServerError, "failed to initialize usage")
+				return
+			}
+
+		// ✅ Some other DB error
+		case err != nil:
 			helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error checking usage: %v", err))
 			return
-		} else {
+
+		// ✅ Normal usage flow
+		default:
 			if now.Sub(usage.LastUsedAt) < 24*time.Hour {
 				if usage.Count >= usage.MaxDaily {
-					helpers.RespondWithError(w, http.StatusTooManyRequests, "daily usage limit reached")
+					remaining := 24*time.Hour - now.Sub(usage.LastUsedAt)
+					helpers.RespondWithJson(w, http.StatusTooManyRequests, map[string]any{
+						"error":             "daily_usage_limit_reached",
+						"message":           "Daily usage limit reached",
+						"remaining_seconds": int(remaining.Seconds()),
+					})
 					return
 				}
-				_ = apiConfig.DB.UpdateUserUsageCount(r.Context(), database.UpdateUserUsageCountParams{
-					UserID: user.ID,
-					Count:  usage.Count + 1,
+
+				_ = apiConfig.DB.UpdateUserUsage(r.Context(), database.UpdateUserUsageParams{
+					UserID:     user.ID,
+					Count:      usage.Count + 1,
+					LastUsedAt: now,
 				})
 			} else {
-				_ = apiConfig.DB.UpdateUserUsageCount(r.Context(), database.UpdateUserUsageCountParams{
-					UserID: user.ID,
-					Count:  1,
+				// new day
+				_ = apiConfig.DB.UpdateUserUsage(r.Context(), database.UpdateUserUsageParams{
+					UserID:     user.ID,
+					Count:      1,
+					LastUsedAt: now,
 				})
 			}
 		}
 
-		next(w, r, DbUserToModelsUser(user))
-	})
+		// ✅ Only reach here if allowed
+		next(w, r, user)
+	}
 }
-
 func (apiConfig *Config) RoleMiddleware(allowedRoles []string, next func(http.ResponseWriter, *http.Request, User)) http.HandlerFunc {
 	return apiConfig.AuthMiddleware(func(w http.ResponseWriter, r *http.Request, user User) {
 		for _, role := range allowedRoles {
