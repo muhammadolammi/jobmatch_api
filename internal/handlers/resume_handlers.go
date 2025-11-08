@@ -21,7 +21,7 @@ func ErrorReady(w http.ResponseWriter, r *http.Request) {
 	helpers.RespondWithError(w, 200, "this is an error test")
 }
 
-func (apiConfig *Config) AnalyzeHandler(w http.ResponseWriter, r *http.Request) {
+func (apiConfig *Config) AnalyzeHandler(w http.ResponseWriter, r *http.Request, user User) {
 	body := struct {
 		SessionID string `json:"session_id"`
 	}{}

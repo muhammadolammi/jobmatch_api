@@ -53,7 +53,8 @@ func server(apiConfig *handlers.Config) {
 
 	// analyze
 	apiRoute.Post("/uploads/complete", apiConfig.AuthMiddleware(apiConfig.UploadCompleteHandler))
-	apiRoute.Post("/analyze", apiConfig.AnalyzeHandler)
+	apiRoute.Post("/analyze", apiConfig.AuthMiddleware(apiConfig.RateLimiter(apiConfig.AnalyzeHandler)))
+
 	apiRoute.Get("/results/{sessionID}", apiConfig.GetResultHandler)
 	router.Mount("/api", apiRoute)
 	srv := &http.Server{

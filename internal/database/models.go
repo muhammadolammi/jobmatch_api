@@ -75,3 +75,11 @@ type User struct {
 	Password  string
 	CreatedAt time.Time
 }
+
+type UserUsage struct {
+	ID         uuid.UUID
+	Count      int32
+	LastUsedAt time.Time
+	MaxDaily   int32
+	UserID     uuid.UUID
+}
