@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"net/http"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -22,6 +23,11 @@ type Config struct {
 	RefreshTokenEXpirationTime int //in minute
 	AcessTokenEXpirationTime   int //in minute
 	RateLimit                  int
+	PaystackApi                string
+	PaystackSecretKey          string
+
+	HttpClient *http.Client // this should be used for all internal and external http communication
+
 }
 
 type EmployerProfile struct {
@@ -108,4 +114,17 @@ type AnalysesResults struct {
 	CreatedAt time.Time        `json:"created_at"`
 	SessionID uuid.UUID        `json:"session_id"`
 	UpdatedAt time.Time        `json:"updated_at"`
+}
+
+type Plan struct {
+	ID          uuid.UUID      `json:"id"`
+	Name        string         `json:"name"`
+	PlanCode    string         `json:"plan_code"`
+	Amount      int32          `json:"amount"`
+	Currency    string         `json:"currency"`
+	Interval    string         `json:"interval"`
+	DailyLimit  int32          `json:"daily_limit"`
+	Description sql.NullString `json:"description"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
 }

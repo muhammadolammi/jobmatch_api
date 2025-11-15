@@ -37,6 +37,19 @@ type JobSeekerProfile struct {
 	UserID    uuid.UUID
 }
 
+type Plan struct {
+	ID          uuid.UUID
+	Name        string
+	PlanCode    string
+	Amount      int32
+	Currency    string
+	Interval    string
+	DailyLimit  int32
+	Description sql.NullString
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 type RefreshToken struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
@@ -68,6 +81,30 @@ type Session struct {
 	JobDescription string
 }
 
+type Subscription struct {
+	ID               uuid.UUID
+	UserID           uuid.UUID
+	Status           string
+	ExpiresAt        sql.NullTime
+	CanceledAt       sql.NullTime
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	NextPaymentDate  time.Time
+	SubscriptionCode sql.NullString
+	PlanID           uuid.UUID
+}
+
+type SubscriptionHistory struct {
+	ID             uuid.UUID
+	SubscriptionID uuid.UUID
+	UserID         uuid.UUID
+	EventType      string
+	OldValue       sql.NullString
+	NewValue       sql.NullString
+	EventSource    string
+	CreatedAt      time.Time
+}
+
 type User struct {
 	ID        uuid.UUID
 	Email     string
@@ -78,8 +115,8 @@ type User struct {
 
 type UserUsage struct {
 	ID         uuid.UUID
-	Count      int32
-	LastUsedAt time.Time
-	MaxDaily   int32
 	UserID     uuid.UUID
+	Count      int32
+	MaxDaily   int32
+	LastUsedAt time.Time
 }

@@ -53,7 +53,16 @@ func server(apiConfig *handlers.Config) {
 
 	// analyze
 	apiRoute.Post("/uploads/complete", apiConfig.AuthMiddleware(apiConfig.UploadCompleteHandler))
-	apiRoute.Post("/analyze", apiConfig.AuthMiddleware(apiConfig.RateLimiter(apiConfig.AnalyzeHandler)))
+	apiRoute.Post("/analyze", apiConfig.RateLimiter(apiConfig.AnalyzeHandler))
+
+	// plans & subscription
+	apiRoute.Post("/plans", apiConfig.RoleMiddleware([]string{"admin"}, apiConfig.PostPlanHandler))
+	apiRoute.Get("/plans", apiConfig.RoleMiddleware([]string{"admin"}, apiConfig.GetPlansHandler))
+
+	apiRoute.Post("/subscribe", apiConfig.AuthMiddleware(apiConfig.PostSubscribe))
+
+	// webhooks
+	apiRoute.Post("/webhook/paystack", apiConfig.PaystackWebhook)
 
 	apiRoute.Get("/results/{sessionID}", apiConfig.GetResultHandler)
 	router.Mount("/api", apiRoute)
