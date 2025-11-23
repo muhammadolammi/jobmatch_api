@@ -46,9 +46,9 @@ func main() {
 
 	dbqueries := database.New(db)
 
-	r2AccountId := os.Getenv("R2_ACCCOUNT_ID")
+	r2AccountId := os.Getenv("R2_ACCOUNT_ID")
 	if r2AccountId == "" {
-		log.Fatal("empty R2_ACCCOUNT_ID in environment")
+		log.Fatal("empty R2_ACCOUNT_ID in environment")
 	}
 	r2Bucket := os.Getenv("R2_BUCKET")
 	if r2Bucket == "" {
@@ -116,6 +116,7 @@ func main() {
 		PaystackApi:                "https://api.paystack.co",
 		HttpClient:                 &httpClient,
 		PaystackSecretKey:          paystackSecretKey,
+		ENV:                        environment,
 	}
 	server(&apiConfig)
 }

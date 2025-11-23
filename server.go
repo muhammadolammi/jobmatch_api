@@ -57,6 +57,8 @@ func server(apiConfig *handlers.Config) {
 
 	// plans & subscription
 	apiRoute.Post("/plans", apiConfig.RoleMiddleware([]string{"admin"}, apiConfig.PostPlanHandler))
+	apiRoute.Post("/plans/subpage", apiConfig.RoleMiddleware([]string{"admin"}, apiConfig.PostPlanSubPageHandler))
+
 	apiRoute.Get("/plans", apiConfig.RoleMiddleware([]string{"admin"}, apiConfig.GetPlansHandler))
 
 	apiRoute.Post("/subscribe", apiConfig.AuthMiddleware(apiConfig.PostSubscribe))

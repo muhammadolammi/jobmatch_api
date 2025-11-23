@@ -72,7 +72,7 @@ func DbPlanToModelPlan(dbPlan database.Plan) Plan {
 		UpdatedAt:   dbPlan.UpdatedAt,
 		Description: dbPlan.Description,
 		DailyLimit:  dbPlan.DailyLimit,
-		PlanCode:    dbPlan.PlanCode,
+		PlanCode:    dbPlan.PlanCode.String,
 		Interval:    dbPlan.Interval,
 	}
 

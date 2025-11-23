@@ -27,7 +27,7 @@ type Config struct {
 	PaystackSecretKey          string
 
 	HttpClient *http.Client // this should be used for all internal and external http communication
-
+	ENV        string
 }
 
 type EmployerProfile struct {
