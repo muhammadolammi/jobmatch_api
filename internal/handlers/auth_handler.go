@@ -285,7 +285,44 @@ func (apiConfig *Config) PasswordChangeHandler(w http.ResponseWriter, r *http.Re
 
 func (apiConfig *Config) GetUserHandler(w http.ResponseWriter, r *http.Request, user User) {
 
-	helpers.RespondWithJson(w, 200, user)
+	// 1. Default display name is the email prefix (fallback)
+	displayName := strings.Split(user.Email, "@")[0]
+
+	switch user.Role {
+	case "job_seeker":
+		profile, err := apiConfig.DB.GetJobSeekerProfileByUserID(r.Context(), user.ID)
+		if err == nil {
+			displayName = profile.FirstName
+		}
+	case "employer":
+		profile, err := apiConfig.DB.GetEmployerProfileByUserID(r.Context(), user.ID)
+		if err == nil {
+			displayName = profile.CompanyName
+		}
+	case "admin":
+		// Try Job Seeker first
+		jsProfile, err := apiConfig.DB.GetJobSeekerProfileByUserID(r.Context(), user.ID)
+		if err == nil {
+			displayName = jsProfile.FirstName
+			break // Stop here if found
+		}
+
+		// Fallback to Employer check
+		empProfile, err := apiConfig.DB.GetEmployerProfileByUserID(r.Context(), user.ID)
+		if err == nil {
+			displayName = empProfile.CompanyName
+		}
+	}
+	res := struct {
+		User
+		DisplayName string `json:"display_name"`
+	}{
+		User:        user,
+		DisplayName: displayName,
+	}
+
+	// 3. Respond with the new field
+	helpers.RespondWithJson(w, http.StatusOK, res)
 }
 
 func (apiConfig *Config) RefreshTokens(w http.ResponseWriter, r *http.Request) {
