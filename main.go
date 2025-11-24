@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"log"
+	"net/http"
 	"os"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
@@ -44,9 +46,9 @@ func main() {
 
 	dbqueries := database.New(db)
 
-	r2AccountId := os.Getenv("R2_ACCCOUNT_ID")
+	r2AccountId := os.Getenv("R2_ACCOUNT_ID")
 	if r2AccountId == "" {
-		log.Fatal("empty R2_ACCCOUNT_ID in environment")
+		log.Fatal("empty R2_ACCOUNT_ID in environment")
 	}
 	r2Bucket := os.Getenv("R2_BUCKET")
 	if r2Bucket == "" {
@@ -87,10 +89,17 @@ func main() {
 	if jwtKey == "" {
 		log.Fatal("empty JWT_KEY in environment")
 	}
+	paystackSecretKey := os.Getenv("PAYSTACK_SECRET_KEY")
+	if paystackSecretKey == "" {
+		log.Fatal("empty PAYSTACK_SECRET_KEY in environment")
+	}
 	conn, err := amqp.Dial(rabbitmqUrl)
 	if err != nil {
 		log.Fatalf("error connecting to RabbitMQ. err:  %v", err)
 
+	}
+	httpClient := http.Client{
+		Timeout: time.Minute,
 	}
 	apiConfig := handlers.Config{
 		DB:                         dbqueries,
@@ -104,6 +113,10 @@ func main() {
 		AcessTokenEXpirationTime:   15,
 		RabbitConn:                 conn,
 		RateLimit:                  2, // lets just rate limit to 2 for now
+		PaystackApi:                "https://api.paystack.co",
+		HttpClient:                 &httpClient,
+		PaystackSecretKey:          paystackSecretKey,
+		ENV:                        environment,
 	}
 	server(&apiConfig)
 }
