@@ -93,5 +93,6 @@ jobs:
             -e R2_BUCKET='${{ secrets.R2_BUCKET }}' \
             -e R2_SECRET_KEY='${{ secrets.R2_SECRET_KEY }}' \
             -e R2_ACCESS_KEY='${{ secrets.R2_ACCESS_KEY }}' \
+            -e PAYSTACK_SECRET_KEY='${{ secrets.PAYSTACK_SECRET_KEY }}' \
             muhammadolammi/jobmatch-backend:latest
           EOF
