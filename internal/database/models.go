@@ -83,13 +83,15 @@ type Session struct {
 }
 
 type Subscription struct {
-	ID         uuid.UUID
-	UserID     uuid.UUID
-	Status     string
-	CanceledAt sql.NullTime
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
-	PlanID     uuid.UUID
+	ID              uuid.UUID
+	UserID          uuid.UUID
+	Status          string
+	CanceledAt      sql.NullTime
+	NextPaymentDate sql.NullTime
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	PaystackSubCode sql.NullString
+	PlanID          uuid.UUID
 }
 
 type SubscriptionHistory struct {
@@ -111,7 +113,7 @@ type User struct {
 	CreatedAt time.Time
 }
 
-type UserUsage struct {
+type UserDailyUsage struct {
 	ID         uuid.UUID
 	UserID     uuid.UUID
 	Count      int32

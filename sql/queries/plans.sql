@@ -10,6 +10,8 @@ SELECT * FROM plans;
 
 -- name: GetPlanWithName :one
 SELECT * FROM plans WHERE name=$1;
+-- name: GetPlan :one
+SELECT * FROM plans WHERE id=$1;
 
 -- name: GetPlanWithPlaneCode :one
 SELECT * FROM plans WHERE plan_code=$1;

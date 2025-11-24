@@ -59,7 +59,7 @@ func (apiConfig *Config) PostPlanHandler(w http.ResponseWriter, r *http.Request,
 	// SAVE PLAN TO DB FIRST
 	dbPlan, err := apiConfig.DB.CreatePlan(r.Context(), database.CreatePlanParams{
 		Name:       body.Name,
-		Amount:     int32(body.Amount),
+		Amount:     int32(helpers.ConvertAmount(body.Amount, body.Currency)),
 		DailyLimit: dailyLimit,
 		Currency:   body.Currency,
 	})
@@ -181,4 +181,10 @@ func (apiConfig *Config) PostPlanSubPageHandler(w http.ResponseWriter, r *http.R
 		},
 		ID: body.PlanID,
 	})
+	if err != nil {
+		log.Println("error updating  plan subscription page. err: ", err)
+		helpers.RespondWithError(w, http.StatusBadRequest, "error updating plan context")
+		return
+	}
+	helpers.RespondWithJson(w, http.StatusOK, "plan subscription page updated")
 }

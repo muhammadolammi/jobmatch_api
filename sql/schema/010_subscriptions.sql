@@ -4,8 +4,11 @@ CREATE TABLE subscriptions (
     user_id UUID UNIQUE NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',     -- pending, active, canceled, expired
     canceled_at TIMESTAMP,
+    next_payment_date TIMESTAMP ,
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP NOT NULL DEFAULT NOW(),
+
+    paystack_sub_code TEXT ,
     plan_id UUID NOT NULL,
     CONSTRAINT fk_subscriptions_users
         FOREIGN KEY (user_id)

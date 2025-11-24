@@ -20,3 +20,27 @@ UPDATE subscriptions
 SET 
   plan_id = $1
 WHERE id = $2;
+
+
+-- name: UpdateSubscriptionStatus :exec
+UPDATE subscriptions
+SET 
+  status = $1
+WHERE id = $2;
+
+
+-- name: UpdateSubscriptionNextPaymentDate :exec
+UPDATE subscriptions
+SET 
+  next_payment_date = $1
+WHERE id = $2;
+
+
+-- name: UpdateSubscriptionForActivation :exec
+UPDATE subscriptions
+SET 
+  next_payment_date = $1,
+  status = $2,
+  paystack_sub_code = $3
+
+WHERE id = $4;

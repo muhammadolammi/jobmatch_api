@@ -7,6 +7,7 @@ package database
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/google/uuid"
 )
@@ -28,7 +29,7 @@ const createSubscription = `-- name: CreateSubscription :one
 INSERT INTO subscriptions (
  user_id, plan_id )
 VALUES ( $1, $2)
-RETURNING id, user_id, status, canceled_at, created_at, updated_at, plan_id
+RETURNING id, user_id, status, canceled_at, next_payment_date, created_at, updated_at, paystack_sub_code, plan_id
 `
 
 type CreateSubscriptionParams struct {
@@ -44,8 +45,10 @@ func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscription
 		&i.UserID,
 		&i.Status,
 		&i.CanceledAt,
+		&i.NextPaymentDate,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PaystackSubCode,
 		&i.PlanID,
 	)
 	return i, err
@@ -53,7 +56,7 @@ func (q *Queries) CreateSubscription(ctx context.Context, arg CreateSubscription
 
 const getSubscriptionWithUserID = `-- name: GetSubscriptionWithUserID :one
 
-SELECT id, user_id, status, canceled_at, created_at, updated_at, plan_id FROM subscriptions 
+SELECT id, user_id, status, canceled_at, next_payment_date, created_at, updated_at, paystack_sub_code, plan_id FROM subscriptions 
 WHERE user_id=$1
 `
 
@@ -65,11 +68,57 @@ func (q *Queries) GetSubscriptionWithUserID(ctx context.Context, userID uuid.UUI
 		&i.UserID,
 		&i.Status,
 		&i.CanceledAt,
+		&i.NextPaymentDate,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PaystackSubCode,
 		&i.PlanID,
 	)
 	return i, err
+}
+
+const updateSubscriptionForActivation = `-- name: UpdateSubscriptionForActivation :exec
+UPDATE subscriptions
+SET 
+  next_payment_date = $1,
+  status = $2,
+  paystack_sub_code = $3
+
+WHERE id = $4
+`
+
+type UpdateSubscriptionForActivationParams struct {
+	NextPaymentDate sql.NullTime
+	Status          string
+	PaystackSubCode sql.NullString
+	ID              uuid.UUID
+}
+
+func (q *Queries) UpdateSubscriptionForActivation(ctx context.Context, arg UpdateSubscriptionForActivationParams) error {
+	_, err := q.db.ExecContext(ctx, updateSubscriptionForActivation,
+		arg.NextPaymentDate,
+		arg.Status,
+		arg.PaystackSubCode,
+		arg.ID,
+	)
+	return err
+}
+
+const updateSubscriptionNextPaymentDate = `-- name: UpdateSubscriptionNextPaymentDate :exec
+UPDATE subscriptions
+SET 
+  next_payment_date = $1
+WHERE id = $2
+`
+
+type UpdateSubscriptionNextPaymentDateParams struct {
+	NextPaymentDate sql.NullTime
+	ID              uuid.UUID
+}
+
+func (q *Queries) UpdateSubscriptionNextPaymentDate(ctx context.Context, arg UpdateSubscriptionNextPaymentDateParams) error {
+	_, err := q.db.ExecContext(ctx, updateSubscriptionNextPaymentDate, arg.NextPaymentDate, arg.ID)
+	return err
 }
 
 const updateSubscriptionPlan = `-- name: UpdateSubscriptionPlan :exec
@@ -86,5 +135,22 @@ type UpdateSubscriptionPlanParams struct {
 
 func (q *Queries) UpdateSubscriptionPlan(ctx context.Context, arg UpdateSubscriptionPlanParams) error {
 	_, err := q.db.ExecContext(ctx, updateSubscriptionPlan, arg.PlanID, arg.ID)
+	return err
+}
+
+const updateSubscriptionStatus = `-- name: UpdateSubscriptionStatus :exec
+UPDATE subscriptions
+SET 
+  status = $1
+WHERE id = $2
+`
+
+type UpdateSubscriptionStatusParams struct {
+	Status string
+	ID     uuid.UUID
+}
+
+func (q *Queries) UpdateSubscriptionStatus(ctx context.Context, arg UpdateSubscriptionStatusParams) error {
+	_, err := q.db.ExecContext(ctx, updateSubscriptionStatus, arg.Status, arg.ID)
 	return err
 }

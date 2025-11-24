@@ -2,6 +2,9 @@ package helpers
 
 import (
 	"bytes"
+	"crypto/hmac"
+	"crypto/sha512"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -55,4 +58,11 @@ func CallPaystack(url, method, secret string, payload any, client *http.Client) 
 	}
 
 	return &ps, nil
+}
+
+func VerifyPaystackSignature(payload []byte, signature string, secret string) bool {
+	h := hmac.New(sha512.New, []byte(secret))
+	h.Write(payload)
+	expectedSignature := hex.EncodeToString(h.Sum(nil))
+	return expectedSignature == signature
 }

@@ -64,16 +64,17 @@ func DbAnalysesResultToModelAnalysesResults(dbAnalysesResults database.AnalysesR
 // Session model helpers
 func DbPlanToModelPlan(dbPlan database.Plan) Plan {
 	return Plan{
-		ID:          dbPlan.ID,
-		Name:        dbPlan.Name,
-		CreatedAt:   dbPlan.CreatedAt,
-		Amount:      dbPlan.Amount,
-		Currency:    dbPlan.Currency,
-		UpdatedAt:   dbPlan.UpdatedAt,
-		Description: dbPlan.Description,
-		DailyLimit:  dbPlan.DailyLimit,
-		PlanCode:    dbPlan.PlanCode.String,
-		Interval:    dbPlan.Interval,
+		ID:               dbPlan.ID,
+		Name:             dbPlan.Name,
+		CreatedAt:        dbPlan.CreatedAt,
+		Amount:           dbPlan.Amount,
+		Currency:         dbPlan.Currency,
+		UpdatedAt:        dbPlan.UpdatedAt,
+		Description:      dbPlan.Description.String,
+		SubscriptionPage: dbPlan.SubscriptionPage.String,
+		DailyLimit:       dbPlan.DailyLimit,
+		PlanCode:         dbPlan.PlanCode.String,
+		Interval:         dbPlan.Interval,
 	}
 
 }
@@ -84,4 +85,28 @@ func DbPlansToModelPlans(dbPlans []database.Plan) []Plan {
 		plans = append(plans, DbPlanToModelPlan(dbPlan))
 	}
 	return plans
+}
+
+// Subscription model helpers
+func DbSubscriptionToModelSubscription(dbSub database.Subscription) Subscription {
+	return Subscription{
+		ID:              dbSub.ID,
+		CreatedAt:       dbSub.CreatedAt,
+		UserID:          dbSub.UserID,
+		Status:          dbSub.Status,
+		UpdatedAt:       dbSub.UpdatedAt,
+		CanceledAt:      dbSub.CreatedAt,
+		NextPaymentDate: dbSub.NextPaymentDate.Time,
+		PaystackSubCode: dbSub.PaystackSubCode.String,
+		PlanID:          dbSub.PlanID,
+	}
+
+}
+
+func DbSubscriptionsToModelSubscriptions(dbSubs []database.Subscription) []Subscription {
+	subs := []Subscription{}
+	for _, dbSub := range dbSubs {
+		subs = append(subs, DbSubscriptionToModelSubscription(dbSub))
+	}
+	return subs
 }

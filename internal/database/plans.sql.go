@@ -52,6 +52,29 @@ func (q *Queries) CreatePlan(ctx context.Context, arg CreatePlanParams) (Plan, e
 	return i, err
 }
 
+const getPlan = `-- name: GetPlan :one
+SELECT id, name, plan_code, amount, currency, interval, daily_limit, description, subscription_page, created_at, updated_at FROM plans WHERE id=$1
+`
+
+func (q *Queries) GetPlan(ctx context.Context, id uuid.UUID) (Plan, error) {
+	row := q.db.QueryRowContext(ctx, getPlan, id)
+	var i Plan
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.PlanCode,
+		&i.Amount,
+		&i.Currency,
+		&i.Interval,
+		&i.DailyLimit,
+		&i.Description,
+		&i.SubscriptionPage,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const getPlanWithName = `-- name: GetPlanWithName :one
 SELECT id, name, plan_code, amount, currency, interval, daily_limit, description, subscription_page, created_at, updated_at FROM plans WHERE name=$1
 `

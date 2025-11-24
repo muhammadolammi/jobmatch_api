@@ -117,14 +117,27 @@ type AnalysesResults struct {
 }
 
 type Plan struct {
-	ID          uuid.UUID      `json:"id"`
-	Name        string         `json:"name"`
-	PlanCode    string         `json:"plan_code"`
-	Amount      int32          `json:"amount"`
-	Currency    string         `json:"currency"`
-	Interval    string         `json:"interval"`
-	DailyLimit  int32          `json:"daily_limit"`
-	Description sql.NullString `json:"description"`
-	CreatedAt   time.Time      `json:"created_at"`
-	UpdatedAt   time.Time      `json:"updated_at"`
+	ID               uuid.UUID `json:"id"`
+	Name             string    `json:"name"`
+	PlanCode         string    `json:"plan_code"`
+	Amount           int32     `json:"amount"`
+	Currency         string    `json:"currency"`
+	Interval         string    `json:"interval"`
+	DailyLimit       int32     `json:"daily_limit"`
+	Description      string    `json:"description"`
+	CreatedAt        time.Time `json:"created_at"`
+	UpdatedAt        time.Time `json:"updated_at"`
+	SubscriptionPage string    `json:"subscription_page"`
+}
+
+type Subscription struct {
+	ID              uuid.UUID
+	UserID          uuid.UUID
+	Status          string
+	CanceledAt      time.Time
+	NextPaymentDate time.Time
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	PaystackSubCode string
+	PlanID          uuid.UUID
 }

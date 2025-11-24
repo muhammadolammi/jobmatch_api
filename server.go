@@ -15,7 +15,7 @@ func server(apiConfig *handlers.Config) {
 
 	// Define CORS options
 	corsOptions := cors.Options{
-		AllowedOrigins: []string{"http://localhost:3000", "http://localhost:8081", "https://jobmatch.qtechconsults.com"}, // You can customize this based on your needs
+		AllowedOrigins: []string{"http://localhost:3000", "http://localhost:8081", "https://jobmatch.qtechconsults.com", "https://jobmatchfrontend.qtechconsults.com"}, // You can customize this based on your needs
 
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"*"}, // You can customize this based on your needs
@@ -59,9 +59,10 @@ func server(apiConfig *handlers.Config) {
 	apiRoute.Post("/plans", apiConfig.RoleMiddleware([]string{"admin"}, apiConfig.PostPlanHandler))
 	apiRoute.Post("/plans/subpage", apiConfig.RoleMiddleware([]string{"admin"}, apiConfig.PostPlanSubPageHandler))
 
-	apiRoute.Get("/plans", apiConfig.RoleMiddleware([]string{"admin"}, apiConfig.GetPlansHandler))
+	apiRoute.Get("/plans", apiConfig.AuthMiddleware(apiConfig.GetPlansHandler))
 
 	apiRoute.Post("/subscribe", apiConfig.AuthMiddleware(apiConfig.PostSubscribe))
+	apiRoute.Get("/subscription/me", apiConfig.AuthMiddleware(apiConfig.HandleGetMySubscription))
 
 	// webhooks
 	apiRoute.Post("/webhook/paystack", apiConfig.PaystackWebhook)
