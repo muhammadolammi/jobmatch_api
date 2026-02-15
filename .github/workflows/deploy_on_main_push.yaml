@@ -64,7 +64,7 @@ jobs:
         with:
           service: '${{ env.SERVICE }}'
           region: '${{ env.REGION }}'
-          project: '${{ env.PROJECT_ID }}'
+          project_id: '${{ env.PROJECT_ID }}'
           # Cloud Run will pull the image from Docker Hub
           image: 'index.docker.io/muhammadolammi/jobmatch-backend:latest'
           # Pass your existing environment variables here
