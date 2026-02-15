@@ -12,6 +12,7 @@ import (
 )
 
 type Config struct {
+	DBURL                      string
 	DB                         *database.Queries
 	JwtKey                     string
 	ClientApiKey               string
