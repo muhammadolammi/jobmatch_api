@@ -120,7 +120,3 @@ func main() {
 	}
 	server(&apiConfig)
 }
-
-
- git config --global user.email "muhammadolammi@gmail.com"
-  git config --global user.name "Muhammad Akewukanwo"
