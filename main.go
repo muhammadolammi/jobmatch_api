@@ -22,11 +22,10 @@ func main() {
 	_ = godotenv.Load()
 	environment := os.Getenv("ENV")
 	if environment == "" {
-		log.Fatal("empty ENV in environment")
+		environment = "deployment"
 	}
 	if environment != "deployment" && environment != "development" {
 		log.Fatal("ENV can only be deployment or development. got: ", environment)
-
 	}
 
 	dbUrl := os.Getenv("DB_URL")
@@ -41,7 +40,7 @@ func main() {
 
 	db, err := sql.Open("postgres", dbUrl)
 	if err != nil {
-		log.Fatal("error opening db. err: ", err)
+		log.Println("DB error:", err)
 	}
 
 	dbqueries := database.New(db)
@@ -79,7 +78,7 @@ func main() {
 	//  we assume its api mode if no runmode is provider
 	port := os.Getenv("PORT")
 	if port == "" {
-		log.Fatal("empty PORT in environment")
+		port = "8080"
 	}
 	clientApiKey := os.Getenv("CLIENT_API_KEY")
 	if clientApiKey == "" {
@@ -95,7 +94,7 @@ func main() {
 	}
 	conn, err := amqp.Dial(rabbitmqUrl)
 	if err != nil {
-		log.Fatalf("error connecting to RabbitMQ. err:  %v", err)
+		log.Println("RabbitMQ not ready:", err)
 
 	}
 	httpClient := http.Client{
