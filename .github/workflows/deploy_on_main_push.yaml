@@ -68,7 +68,6 @@ jobs:
           image: 'index.docker.io/muhammadolammi/jobmatch-backend:latest'
           env_vars: |
             ENV=${{ secrets.ENV }}
-            PORT=${{ secrets.DEPLOY_PORT }}
             DB_URL=${{ secrets.DB_URL }}
             RABBITMQ_URL=${{ secrets.RABBITMQ_URL }}
             CLIENT_API_KEY=${{ secrets.CLIENT_API_KEY }}
