@@ -7,7 +7,7 @@ on:
 
 env:
   PROJECT_ID: 'n3xtbridge' 
-  REGION: 'us-central1'               
+  REGION: 'us-east1'               
   SERVICE: 'jobmatch-backend'          
   WIF_PROVIDER: 'projects/755404739186/locations/global/workloadIdentityPools/github/providers/my-repo'
   # WIF_SERVICE_ACCOUNT: 'my-service-account@my-project.iam.gserviceaccount.com'
