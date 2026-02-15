@@ -56,7 +56,7 @@ func (apiConfig *Config) AnalyzeHandler(w http.ResponseWriter, r *http.Request, 
 	}
 
 	// publish the session
-	err = apiConfig.PublishSession(DbSessionToModelSession(session), apiConfig.RabbitConn)
+	err = apiConfig.PublishSession(DbSessionToModelSession(session), apiConfig.RabbitChan)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, "error queing session. err: "+err.Error())
 		return

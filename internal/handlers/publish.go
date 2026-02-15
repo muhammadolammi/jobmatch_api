@@ -7,16 +7,11 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func (apiConfig *Config) PublishSession(session Session, rabbitConn *amqp.Connection) error {
+func (apiConfig *Config) PublishSession(session Session, rabbitChan *amqp.Channel) error {
 
-	ch, err := rabbitConn.Channel()
-	if err != nil {
-		return fmt.Errorf("error getting connection channel. err: %v", err)
+	defer rabbitChan.Close()
 
-	}
-	defer ch.Close()
-
-	q, err := ch.QueueDeclare(
+	q, err := rabbitChan.QueueDeclare(
 		"sessions", // queue name
 		true,       // durable
 		false,      // auto-delete
@@ -34,7 +29,7 @@ func (apiConfig *Config) PublishSession(session Session, rabbitConn *amqp.Connec
 		return fmt.Errorf("error marshalling session. err: %v", err)
 	}
 
-	err = ch.Publish(
+	err = rabbitChan.Publish(
 		"",     // exchange
 		q.Name, // routing key (queue name)
 		false,  // mandatory

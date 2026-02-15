@@ -21,6 +21,7 @@ type Config struct {
 	AwsConfig                  *aws.Config
 	RABBITMQUrl                string
 	RabbitConn                 *amqp.Connection
+	RabbitChan                 *amqp.Channel
 	RefreshTokenEXpirationTime int //in minute
 	AcessTokenEXpirationTime   int //in minute
 	RateLimit                  int
