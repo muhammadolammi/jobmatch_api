@@ -10,7 +10,7 @@ env:
   REGION: 'us-east1'               
   SERVICE: 'jobmatch-backend'          
   WIF_PROVIDER: 'projects/755404739186/locations/global/workloadIdentityPools/github/providers/my-repo'
-  # WIF_SERVICE_ACCOUNT: 'my-service-account@my-project.iam.gserviceaccount.com'
+  WIF_SERVICE_ACCOUNT: 'github-deployer@n3xtbridge.iam.gserviceaccount.com'
 
 permissions:
   contents: read
@@ -57,7 +57,7 @@ jobs:
         uses: 'google-github-actions/auth@v2'
         with:
           workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
-          # service_account: '${{ env.WIF_SERVICE_ACCOUNT }}'
+          service_account: '${{ env.WIF_SERVICE_ACCOUNT }}'
 
       - name: 'Deploy to Cloud Run'
         uses: 'google-github-actions/deploy-cloudrun@v2'
@@ -65,9 +65,7 @@ jobs:
           service: '${{ env.SERVICE }}'
           region: '${{ env.REGION }}'
           project_id: '${{ env.PROJECT_ID }}'
-          # Cloud Run will pull the image from Docker Hub
           image: 'index.docker.io/muhammadolammi/jobmatch-backend:latest'
-          # Pass your existing environment variables here
           env_vars: |
             ENV=${{ secrets.ENV }}
             PORT=${{ secrets.DEPLOY_PORT }}
