@@ -28,5 +28,5 @@ func (apiConfig *Config) GetResultHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	helpers.RespondWithJson(w, 200, DbAnalysesResultToModelsAnalysesResults(result))
+	helpers.RespondWithJson(w, 200, DbAnalysesResultToModelAnalysesResults(result))
 }

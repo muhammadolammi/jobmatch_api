@@ -35,6 +35,14 @@ func (apiConfig *Config) ClientAuth() func(http.Handler) http.Handler {
 				next.ServeHTTP(w, r)
 				return
 			}
+			// Bypass Paystack webhook
+			if strings.HasPrefix(r.URL.Path, "/api/webhook/paystack") {
+				// TODO handle paystack athorization
+				// Continue to next handler
+				next.ServeHTTP(w, r)
+				return
+			}
+
 			clientApiKey := r.Header.Get("client-api-key")
 			if clientApiKey == "" {
 				log.Println("empty client api key  in request.")
@@ -55,6 +63,7 @@ func (apiConfig *Config) AuthMiddleware(next func(http.ResponseWriter, *http.Req
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if !strings.HasPrefix(authHeader, "Bearer ") {
+			log.Println("aith error here")
 			helpers.RespondWithError(w, http.StatusUnauthorized, "Missing or invalid token")
 			return
 		}
@@ -93,22 +102,18 @@ func (apiConfig *Config) AuthMiddleware(next func(http.ResponseWriter, *http.Req
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "user", DbUserToModelsUser(user))
-		next(w, r.WithContext(ctx), DbUserToModelsUser(user))
+		ctx := context.WithValue(r.Context(), "user", DbUserToModelUser(user))
+		next(w, r.WithContext(ctx), DbUserToModelUser(user))
 	})
 }
-func (apiConfig *Config) RateLimiter(
-	next func(http.ResponseWriter, *http.Request, User),
-) func(http.ResponseWriter, *http.Request, User) {
-	return func(w http.ResponseWriter, r *http.Request, user User) {
+func (apiConfig *Config) RateLimiter(next func(http.ResponseWriter, *http.Request, User)) http.HandlerFunc {
+	return apiConfig.AuthMiddleware(func(w http.ResponseWriter, r *http.Request, user User) {
 		if user.Role == "admin" {
 			next(w, r, user)
 			return
 		}
-
 		now := time.Now()
 		usage, err := apiConfig.DB.GetUserUsage(r.Context(), user.ID)
-
 		switch {
 		// ✅ First-time usage
 		case err == sql.ErrNoRows:
@@ -158,8 +163,9 @@ func (apiConfig *Config) RateLimiter(
 
 		// ✅ Only reach here if allowed
 		next(w, r, user)
-	}
+	})
 }
+
 func (apiConfig *Config) RoleMiddleware(allowedRoles []string, next func(http.ResponseWriter, *http.Request, User)) http.HandlerFunc {
 	return apiConfig.AuthMiddleware(func(w http.ResponseWriter, r *http.Request, user User) {
 		for _, role := range allowedRoles {

@@ -89,9 +89,10 @@ jobs:
             -e RABBITMQ_URL='${{ secrets.RABBITMQ_URL }}' \
             -e CLIENT_API_KEY='${{ secrets.CLIENT_API_KEY }}' \
             -e JWT_KEY='${{ secrets.JWT_KEY }}' \
-            -e R2_ACCCOUNT_ID='${{ secrets.R2_ACCCOUNT_ID }}' \
+            -e R2_ACCOUNT_ID='${{ secrets.R2_ACCOUNT_ID }}' \
             -e R2_BUCKET='${{ secrets.R2_BUCKET }}' \
             -e R2_SECRET_KEY='${{ secrets.R2_SECRET_KEY }}' \
             -e R2_ACCESS_KEY='${{ secrets.R2_ACCESS_KEY }}' \
+            -e PAYSTACK_SECRET_KEY='${{ secrets.PAYSTACK_SECRET_KEY }}' \
             muhammadolammi/jobmatch-backend:latest
           EOF

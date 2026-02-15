@@ -45,3 +45,10 @@ INSERT INTO job_seeker_profiles (
 user_id, first_name,last_name  )
 VALUES ( $1, $2, $3)
 RETURNING *;
+
+
+
+-- name: GetJobSeekerProfileByUserID :one
+SELECT * FROM job_seeker_profiles WHERE $1=user_id;
+-- name: GetEmployerProfileByUserID :one
+SELECT * FROM employer_profiles WHERE $1=user_id;

@@ -50,7 +50,7 @@ func (apiConfig *Config) CreateSession(w http.ResponseWriter, r *http.Request, u
 		return
 
 	}
-	helpers.RespondWithJson(w, http.StatusOK, DbSessionToModelsSession(session))
+	helpers.RespondWithJson(w, http.StatusOK, DbSessionToModelSession(session))
 }
 
 func (apiConfig *Config) GetSessions(w http.ResponseWriter, r *http.Request, user User) {
@@ -62,7 +62,7 @@ func (apiConfig *Config) GetSessions(w http.ResponseWriter, r *http.Request, use
 		return
 
 	}
-	helpers.RespondWithJson(w, http.StatusOK, DbSessionsToModelsSessions(sessions))
+	helpers.RespondWithJson(w, http.StatusOK, DbSessionsToModelSessions(sessions))
 }
 
 func (apiConfig *Config) HandleSessionUpdates(w http.ResponseWriter, r *http.Request, user User) {
@@ -168,5 +168,5 @@ func (apiConfig *Config) GetSession(w http.ResponseWriter, r *http.Request, user
 		return
 
 	}
-	helpers.RespondWithJson(w, http.StatusOK, DbSessionToModelsSession(session))
+	helpers.RespondWithJson(w, http.StatusOK, DbSessionToModelSession(session))
 }
