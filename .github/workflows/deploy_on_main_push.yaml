@@ -6,21 +6,20 @@ on:
       - main  
 
 env:
-  gpgkey: ${{ secrets.GPG_KEY }}
+  PROJECT_ID: 'n3xtbridge' 
+  REGION: 'us-central1'               
+  SERVICE: 'jobmatch-backend'          
+  WIF_PROVIDER: 'projects/755404739186/locations/global/workloadIdentityPools/github/providers/my-repo'
+  # WIF_SERVICE_ACCOUNT: 'my-service-account@my-project.iam.gserviceaccount.com'
 
 permissions:
-  checks: write
   contents: read
-  pull-requests: write
+  id-token: write # Required for Workload Identity
 
 jobs:
   build:
     name: Build and push Docker images
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,17 +31,6 @@ jobs:
         run: |
           chmod +x ./build.sh
           ./build.sh
-          docker --version
-
-      - name: Set version to Git env
-        run: echo "DEPLOY_VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
-
-      - name: Build new Docker image
-        run: |
-          docker build . \
-            -t muhammadolammi/jobmatch-backend:latest \
-            -t muhammadolammi/jobmatch-backend:${{ env.DEPLOY_VERSION }}
-          docker image ls 
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -50,49 +38,44 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Push Docker images
-        run: docker push muhammadolammi/jobmatch-backend --all-tags
+      - name: Build and Push Docker image
+        run: |
+          DEPLOY_VERSION=$(git rev-parse --short HEAD)
+          docker build . -t muhammadolammi/jobmatch-backend:latest -t muhammadolammi/jobmatch-backend:${DEPLOY_VERSION}
+          docker push muhammadolammi/jobmatch-backend --all-tags
 
   deploy:
     needs: build
-    name: Deploy to host
+    name: Deploy to Cloud Run
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Decrypt SSH key
-        run: |
-          mkdir secrets
-          gpg --quiet --batch --yes --decrypt \
-            --passphrase="$gpgkey" \
-            --output secrets/key.pem key.pem.gpg
-          chmod 400 secrets/key.pem
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
+          # service_account: '${{ env.WIF_SERVICE_ACCOUNT }}'
 
-      - name: Pull Docker image on droplet
-        run: |
-          ssh -o StrictHostKeyChecking=no -i secrets/key.pem ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} \
-            'sudo docker pull muhammadolammi/jobmatch-backend:latest'
-
-      - name: Restart Docker container
-        run: |
-          ssh -o StrictHostKeyChecking=no -i secrets/key.pem ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} <<'EOF'
-          sudo docker stop backend || true
-          sudo docker rm backend || true
-          sudo docker run -d \
-            --network main \
-            --name backend \
-            -e ENV='${{ secrets.ENV }}' \
-            -e PORT='${{ secrets.DEPLOY_PORT }}' \
-            -e DB_URL='${{ secrets.DB_URL }}' \
-            -e RABBITMQ_URL='${{ secrets.RABBITMQ_URL }}' \
-            -e CLIENT_API_KEY='${{ secrets.CLIENT_API_KEY }}' \
-            -e JWT_KEY='${{ secrets.JWT_KEY }}' \
-            -e R2_ACCOUNT_ID='${{ secrets.R2_ACCOUNT_ID }}' \
-            -e R2_BUCKET='${{ secrets.R2_BUCKET }}' \
-            -e R2_SECRET_KEY='${{ secrets.R2_SECRET_KEY }}' \
-            -e R2_ACCESS_KEY='${{ secrets.R2_ACCESS_KEY }}' \
-            -e PAYSTACK_SECRET_KEY='${{ secrets.PAYSTACK_SECRET_KEY }}' \
-            muhammadolammi/jobmatch-backend:latest
-          EOF
+      - name: 'Deploy to Cloud Run'
+        uses: 'google-github-actions/deploy-cloudrun@v2'
+        with:
+          service: '${{ env.SERVICE }}'
+          region: '${{ env.REGION }}'
+          # Cloud Run will pull the image from Docker Hub
+          image: 'index.docker.io/muhammadolammi/jobmatch-backend:latest'
+          # Pass your existing environment variables here
+          env_vars: |
+            ENV=${{ secrets.ENV }}
+            PORT=${{ secrets.DEPLOY_PORT }}
+            DB_URL=${{ secrets.DB_URL }}
+            RABBITMQ_URL=${{ secrets.RABBITMQ_URL }}
+            CLIENT_API_KEY=${{ secrets.CLIENT_API_KEY }}
+            JWT_KEY=${{ secrets.JWT_KEY }}
+            R2_ACCOUNT_ID=${{ secrets.R2_ACCOUNT_ID }}
+            R2_BUCKET=${{ secrets.R2_BUCKET }}
+            R2_SECRET_KEY=${{ secrets.R2_SECRET_KEY }}
+            R2_ACCESS_KEY=${{ secrets.R2_ACCESS_KEY }}
+            PAYSTACK_SECRET_KEY=${{ secrets.PAYSTACK_SECRET_KEY }}

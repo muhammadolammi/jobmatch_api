@@ -38,3 +38,5 @@ start.sh
 backup.py
 
 sprints.md
+
+gcloudsetup.sh
