@@ -1,4 +1,4 @@
-package main
+package infra
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"github.com/streadway/amqp"
 )
 
-func connectRabbit(ctx context.Context, cfg *handlers.Config) {
+func ConnectRabbit(ctx context.Context, cfg *handlers.Config) {
 	backoff := time.Second
 	const maxBackoff = 30 * time.Second
 
@@ -47,7 +47,7 @@ func connectRabbit(ctx context.Context, cfg *handlers.Config) {
 	}
 }
 
-func connectDB(ctx context.Context, cfg *handlers.Config) {
+func ConnectDB(ctx context.Context, cfg *handlers.Config) {
 	backoff := time.Second
 	const maxBackoff = 30 * time.Second
 
@@ -95,7 +95,7 @@ func sleepBackoff(b *time.Duration, max time.Duration) {
 		*b = max
 	}
 }
-func loadAWSConfig(apiconfig *handlers.Config, r2Config *handlers.R2Config) {
+func LoadAWSConfig(apiconfig *handlers.Config, r2Config *handlers.R2Config) {
 	awsConfig, err := config.LoadDefaultConfig(context.TODO(),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(r2Config.AccessKey, r2Config.SecretKey, "")),
 		config.WithRegion("auto"),

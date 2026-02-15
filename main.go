@@ -5,6 +5,7 @@ import (
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	"github.com/muhammadolammi/jobmatchapi/infra"
 )
 
 func main() {
@@ -16,8 +17,8 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go connectDB(ctx, &cfg)
-	go connectRabbit(ctx, &cfg)
-	go loadAWSConfig(&cfg, cfg.R2)
+	go infra.ConnectDB(ctx, &cfg)
+	go infra.ConnectRabbit(ctx, &cfg)
+	go infra.LoadAWSConfig(&cfg, cfg.R2)
 	server(&cfg)
 }
