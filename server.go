@@ -15,15 +15,10 @@ func server(apiConfig *handlers.Config) {
 
 	// Define CORS options
 	corsOptions := cors.Options{
-		AllowedOrigins: []string{"http://localhost:3000", "http://localhost:8081", "https://gojobmatch.com"}, // You can customize this based on your needs
+		AllowedOrigins: []string{"http://localhost:3000", "http://localhost:8081", "https://gojobmatch.com", "https://jobmatch-backend-755404739186.us-east1.run.app"}, // You can customize this based on your needs
 
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders: []string{
-			"Accept",
-			"Authorization",
-			"Content-Type",
-			"X-CSRF-Token",
-		},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"*"}, // You can customize this based on your needs
 		AllowCredentials: true,
 		MaxAge:           300, // Maximum age for cache, in seconds
 	}

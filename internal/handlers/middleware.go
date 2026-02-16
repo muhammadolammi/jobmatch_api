@@ -19,10 +19,10 @@ import (
 func (apiConfig *Config) ClientAuth() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.Method == http.MethodOptions {
-				next.ServeHTTP(w, r)
-				return
-			}
+			// if r.Method == http.MethodOptions {
+			// 	next.ServeHTTP(w, r)
+			// 	return
+			// }
 			// Bypass SSE endpoint and inject Authorization header
 			if strings.HasPrefix(r.URL.Path, "/api/sessions/sse") {
 				// Get token from query parameter
