@@ -10,7 +10,7 @@ import (
 	"github.com/muhammadolammi/jobmatchapi/internal/helpers"
 )
 
-func (apiConfig *Config) GetResultHandler(w http.ResponseWriter, r *http.Request) {
+func (cfg *Config) GetResultHandler(w http.ResponseWriter, r *http.Request) {
 	session_id := chi.URLParam(r, "sessionID")
 	sessionId, err := uuid.Parse(session_id)
 	if err != nil {
@@ -20,7 +20,7 @@ func (apiConfig *Config) GetResultHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	result, err := apiConfig.DB.GetAnalysesResultsBySession(r.Context(), sessionId)
+	result, err := cfg.DB.GetAnalysesResultsBySession(r.Context(), sessionId)
 	if err != nil {
 		msg := fmt.Sprintf("error getting result for session. err: %v", err)
 		log.Println(msg)

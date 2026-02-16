@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"time"
 
-	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/pubsub/v2"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/google/uuid"
 	"github.com/muhammadolammi/jobmatchapi/internal/database"
@@ -33,6 +33,7 @@ type Config struct {
 	HttpClient *http.Client // this should be used for all internal and external http communication
 	ENV        string
 	// WorkerApi  string
+	ProjectId string
 }
 
 type EmployerProfile struct {

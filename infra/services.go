@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"cloud.google.com/go/pubsub"
+	"cloud.google.com/go/pubsub/v2"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/muhammadolammi/jobmatchapi/internal/database"
@@ -48,7 +48,11 @@ func ConnectRabbit(ctx context.Context, cfg *handlers.Config) {
 	}
 }
 func ConnectPubSub(ctx context.Context, cfg *handlers.Config) {
-	client, _ := pubsub.NewClient(ctx, "YOUR_PROJECT_ID")
+	client, err := pubsub.NewClient(ctx, cfg.ProjectId)
+	if err != nil {
+		log.Println("❌ Failed to initialize Pub/Sub client:", err)
+		return
+	}
 	cfg.PubSubClient = client
 	log.Println("✅ Pub/Sub client initialized")
 }

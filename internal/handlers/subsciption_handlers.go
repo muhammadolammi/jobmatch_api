@@ -13,9 +13,9 @@ import (
 	"github.com/muhammadolammi/jobmatchapi/internal/helpers"
 )
 
-func (apiConfig *Config) HandleGetMySubscription(w http.ResponseWriter, r *http.Request, user User) {
+func (cfg *Config) HandleGetMySubscription(w http.ResponseWriter, r *http.Request, user User) {
 	// 1. Try to get the subscription from DB
-	sub, err := apiConfig.DB.GetSubscriptionWithUserID(r.Context(), user.ID)
+	sub, err := cfg.DB.GetSubscriptionWithUserID(r.Context(), user.ID)
 
 	// 2. Handle Case: User has never subscribed (Free Tier)
 	if err != nil {
@@ -37,7 +37,7 @@ func (apiConfig *Config) HandleGetMySubscription(w http.ResponseWriter, r *http.
 	// We respond with the full subscription object so frontend has PlanID and Status
 	helpers.RespondWithJson(w, http.StatusOK, DbSubscriptionToModelSubscription(sub))
 }
-func (apiConfig *Config) PostSubscribe(w http.ResponseWriter, r *http.Request, user User) {
+func (cfg *Config) PostSubscribe(w http.ResponseWriter, r *http.Request, user User) {
 	// Check if the user has an active subscription
 
 	body := struct {
@@ -49,7 +49,7 @@ func (apiConfig *Config) PostSubscribe(w http.ResponseWriter, r *http.Request, u
 		return
 	}
 
-	dbPlan, err := apiConfig.DB.GetPlanWithPlaneCode(r.Context(), sql.NullString{Valid: true, String: body.PlanCode})
+	dbPlan, err := cfg.DB.GetPlanWithPlaneCode(r.Context(), sql.NullString{Valid: true, String: body.PlanCode})
 	if err != nil {
 		log.Println("error getting plan from db, err: ", err)
 		helpers.RespondWithError(w, http.StatusInternalServerError, "error retrieving plan")
@@ -64,13 +64,13 @@ func (apiConfig *Config) PostSubscribe(w http.ResponseWriter, r *http.Request, u
 	}
 
 	// lets check if user already subscribed
-	exist, err := apiConfig.DB.CheckSubscriptionExist(r.Context(), user.ID)
+	exist, err := cfg.DB.CheckSubscriptionExist(r.Context(), user.ID)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, "error checking subscription status")
 		return
 	}
 	if exist {
-		userSubscription, err := apiConfig.DB.GetSubscriptionWithUserID(r.Context(), user.ID)
+		userSubscription, err := cfg.DB.GetSubscriptionWithUserID(r.Context(), user.ID)
 		if err != nil {
 			log.Println("user already subscribed, but error getting subscription from db, err: ", err)
 			helpers.RespondWithError(w, http.StatusInternalServerError, "error retrieving user subscription")
@@ -81,7 +81,7 @@ func (apiConfig *Config) PostSubscribe(w http.ResponseWriter, r *http.Request, u
 			// Then user hasnt process on paystack subscription page, wwe just return the subscription url
 			// lets updste the plan
 			if userSubscription.PlanID != dbPlan.ID {
-				err = apiConfig.DB.UpdateSubscriptionPlan(r.Context(), database.UpdateSubscriptionPlanParams{
+				err = cfg.DB.UpdateSubscriptionPlan(r.Context(), database.UpdateSubscriptionPlanParams{
 					ID:     userSubscription.ID,
 					PlanID: dbPlan.ID,
 				})
@@ -106,7 +106,7 @@ func (apiConfig *Config) PostSubscribe(w http.ResponseWriter, r *http.Request, u
 	}
 
 	// lets add subscription to db
-	_, err = apiConfig.DB.CreateSubscription(r.Context(), database.CreateSubscriptionParams{
+	_, err = cfg.DB.CreateSubscription(r.Context(), database.CreateSubscriptionParams{
 		UserID: user.ID,
 		PlanID: dbPlan.ID,
 	})
@@ -127,7 +127,7 @@ func (apiConfig *Config) PostSubscribe(w http.ResponseWriter, r *http.Request, u
 
 }
 
-func (apiConfig *Config) PaystackWebhook(w http.ResponseWriter, r *http.Request) {
+func (cfg *Config) PaystackWebhook(w http.ResponseWriter, r *http.Request) {
 	log.Println("request header", r.Header)
 
 	bodyBytes, err := io.ReadAll(r.Body)
@@ -138,7 +138,7 @@ func (apiConfig *Config) PaystackWebhook(w http.ResponseWriter, r *http.Request)
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	verificationStatus := helpers.VerifyPaystackSignature(bodyBytes, r.Header.Get("x-paystack-signature"), apiConfig.PaystackSecretKey)
+	verificationStatus := helpers.VerifyPaystackSignature(bodyBytes, r.Header.Get("x-paystack-signature"), cfg.PaystackSecretKey)
 	log.Println("verification status", verificationStatus)
 
 	if !verificationStatus {
@@ -180,14 +180,14 @@ func (apiConfig *Config) PaystackWebhook(w http.ResponseWriter, r *http.Request)
 	ctx := r.Context()
 
 	// get user by email
-	user, err := apiConfig.DB.GetUserWithEmail(ctx, event.Data.Customer.Email)
+	user, err := cfg.DB.GetUserWithEmail(ctx, event.Data.Customer.Email)
 	if err != nil {
 		log.Println("error getting user on subscription webhook event")
 		return
 	}
 	log.Println(user)
 	// Find subscription by user id
-	sub, err := apiConfig.DB.GetSubscriptionWithUserID(ctx, user.ID)
+	sub, err := cfg.DB.GetSubscriptionWithUserID(ctx, user.ID)
 	if err != nil {
 		log.Println("webhhok error, error getting user subscription. err: ", err)
 		return
@@ -204,7 +204,7 @@ func (apiConfig *Config) PaystackWebhook(w http.ResponseWriter, r *http.Request)
 		oldHistoryValue := fmt.Sprintf("Status: %s, NextDate: %v", sub.Status, sub.NextPaymentDate.Time)
 
 		// Update DB: Set Status Active, Save Sub Code, Save Date
-		apiConfig.DB.UpdateSubscriptionForActivation(ctx, database.UpdateSubscriptionForActivationParams{
+		cfg.DB.UpdateSubscriptionForActivation(ctx, database.UpdateSubscriptionForActivationParams{
 			ID:              sub.ID,
 			Status:          "active", // Use "active", not "created" for functional logic
 			NextPaymentDate: sql.NullTime{Valid: true, Time: nextPaymentTime},
@@ -212,7 +212,7 @@ func (apiConfig *Config) PaystackWebhook(w http.ResponseWriter, r *http.Request)
 		})
 
 		// History
-		apiConfig.DB.CreateSubscriptionHistory(ctx, database.CreateSubscriptionHistoryParams{
+		cfg.DB.CreateSubscriptionHistory(ctx, database.CreateSubscriptionHistoryParams{
 			SubscriptionID: sub.ID,
 			UserID:         sub.UserID,
 			EventType:      "subscription_create",
@@ -229,7 +229,7 @@ func (apiConfig *Config) PaystackWebhook(w http.ResponseWriter, r *http.Request)
 		// to get the new date. But for 'charge.success', we just log the money.
 
 		// Log the successful payment to history
-		apiConfig.DB.CreateSubscriptionHistory(ctx, database.CreateSubscriptionHistoryParams{
+		cfg.DB.CreateSubscriptionHistory(ctx, database.CreateSubscriptionHistoryParams{
 			SubscriptionID: sub.ID,
 			UserID:         sub.UserID,
 			EventType:      "charge_success", // Record that money was paid
@@ -240,7 +240,7 @@ func (apiConfig *Config) PaystackWebhook(w http.ResponseWriter, r *http.Request)
 
 		// Safety check: Ensure user is active (in case they were 'attention' before)
 		if sub.Status != "active" {
-			apiConfig.DB.UpdateSubscriptionStatus(ctx, database.UpdateSubscriptionStatusParams{
+			cfg.DB.UpdateSubscriptionStatus(ctx, database.UpdateSubscriptionStatusParams{
 				ID:     sub.ID,
 				Status: "active",
 			})
@@ -248,13 +248,13 @@ func (apiConfig *Config) PaystackWebhook(w http.ResponseWriter, r *http.Request)
 		//    now lets update user max daily usage
 		// 1. GET THE PLAN DETAILS to find the DailyLimit
 		// We use the PlanID from the subscription we found earlier
-		planDetails, err := apiConfig.DB.GetPlan(ctx, sub.PlanID)
+		planDetails, err := cfg.DB.GetPlan(ctx, sub.PlanID)
 		if err != nil {
 			log.Println("Webhook Error: could not find plan details to update rate limit", err)
 			// Don't return, just log. The subscription is active, but limit update failed.
 		} else {
 			// 2. UPDATE THE USER USAGE TABLE
-			err = apiConfig.DB.UpdateUserDailyUsageLimit(ctx, database.UpdateUserDailyUsageLimitParams{
+			err = cfg.DB.UpdateUserDailyUsageLimit(ctx, database.UpdateUserDailyUsageLimitParams{
 				UserID:   sub.UserID,
 				MaxDaily: planDetails.DailyLimit,
 			})
@@ -264,12 +264,12 @@ func (apiConfig *Config) PaystackWebhook(w http.ResponseWriter, r *http.Request)
 		}
 	case "invoice.payment_failed":
 		// Update Status to attention/past_due
-		apiConfig.DB.UpdateSubscriptionStatus(ctx, database.UpdateSubscriptionStatusParams{
+		cfg.DB.UpdateSubscriptionStatus(ctx, database.UpdateSubscriptionStatusParams{
 			ID:     sub.ID,
 			Status: "attention",
 		})
 
-		apiConfig.DB.CreateSubscriptionHistory(ctx, database.CreateSubscriptionHistoryParams{
+		cfg.DB.CreateSubscriptionHistory(ctx, database.CreateSubscriptionHistoryParams{
 			SubscriptionID: sub.ID,
 			UserID:         sub.UserID,
 			EventType:      "payment_failed",
@@ -280,7 +280,7 @@ func (apiConfig *Config) PaystackWebhook(w http.ResponseWriter, r *http.Request)
 		// REVERT TO DEFAULT LIMIT (e.g., 2 requests per day)
 		defaultLimit := int32(2)
 
-		err = apiConfig.DB.UpdateUserDailyUsageLimit(ctx, database.UpdateUserDailyUsageLimitParams{
+		err = cfg.DB.UpdateUserDailyUsageLimit(ctx, database.UpdateUserDailyUsageLimitParams{
 			UserID:   sub.UserID,
 			MaxDaily: defaultLimit,
 		})
@@ -289,12 +289,12 @@ func (apiConfig *Config) PaystackWebhook(w http.ResponseWriter, r *http.Request)
 		}
 
 	case "subscription.disable":
-		apiConfig.DB.UpdateSubscriptionStatus(ctx, database.UpdateSubscriptionStatusParams{
+		cfg.DB.UpdateSubscriptionStatus(ctx, database.UpdateSubscriptionStatusParams{
 			ID:     sub.ID,
 			Status: "cancelled",
 		})
 
-		apiConfig.DB.CreateSubscriptionHistory(ctx, database.CreateSubscriptionHistoryParams{
+		cfg.DB.CreateSubscriptionHistory(ctx, database.CreateSubscriptionHistoryParams{
 			SubscriptionID: sub.ID,
 			UserID:         sub.UserID,
 			EventType:      "cancelled",
@@ -305,7 +305,7 @@ func (apiConfig *Config) PaystackWebhook(w http.ResponseWriter, r *http.Request)
 		// REVERT TO DEFAULT LIMIT (e.g., 2 requests per day)
 		defaultLimit := int32(2)
 
-		err = apiConfig.DB.UpdateUserDailyUsageLimit(ctx, database.UpdateUserDailyUsageLimitParams{
+		err = cfg.DB.UpdateUserDailyUsageLimit(ctx, database.UpdateUserDailyUsageLimitParams{
 			UserID:   sub.UserID,
 			MaxDaily: defaultLimit,
 		})

@@ -14,7 +14,7 @@ import (
 	"github.com/muhammadolammi/jobmatchapi/internal/helpers"
 )
 
-func (apiConfig *Config) PostPlanHandler(w http.ResponseWriter, r *http.Request, user User) {
+func (cfg *Config) PostPlanHandler(w http.ResponseWriter, r *http.Request, user User) {
 	body := struct {
 		Name       string `json:"name"`
 		Amount     int    `json:"amount"`
@@ -53,11 +53,11 @@ func (apiConfig *Config) PostPlanHandler(w http.ResponseWriter, r *http.Request,
 	// change body currency to upper
 	body.Currency = strings.ToUpper(body.Currency)
 	// add test to plan in development
-	if apiConfig.ENV == "development" {
+	if cfg.ENV == "development" {
 		body.Name = body.Name + "-test"
 	}
 	// SAVE PLAN TO DB FIRST
-	dbPlan, err := apiConfig.DB.CreatePlan(r.Context(), database.CreatePlanParams{
+	dbPlan, err := cfg.DB.CreatePlan(r.Context(), database.CreatePlanParams{
 		Name:       body.Name,
 		Amount:     int32(helpers.ConvertAmount(body.Amount, body.Currency)),
 		DailyLimit: dailyLimit,
@@ -65,7 +65,7 @@ func (apiConfig *Config) PostPlanHandler(w http.ResponseWriter, r *http.Request,
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "duplicate key") || strings.Contains(err.Error(), "unique constraint") {
-			dbPlan, err = apiConfig.DB.GetPlanWithName(r.Context(), body.Name)
+			dbPlan, err = cfg.DB.GetPlanWithName(r.Context(), body.Name)
 			if err != nil {
 				log.Println("error getting old plan from db. err: ", err)
 				helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error saving plan to db response. err: %v", err))
@@ -109,7 +109,7 @@ func (apiConfig *Config) PostPlanHandler(w http.ResponseWriter, r *http.Request,
 		}{}
 
 		// log.Println("domain:: ", res.Data.Domain)
-		paystackRes, err := helpers.CallPaystack(apiConfig.PaystackApi+"/plan", "POST", apiConfig.PaystackSecretKey, payload, apiConfig.HttpClient)
+		paystackRes, err := helpers.CallPaystack(cfg.PaystackApi+"/plan", "POST", cfg.PaystackSecretKey, payload, cfg.HttpClient)
 		if err != nil {
 			log.Printf("error calling paystack. err: %v\n", err)
 			helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error calling paystack. err: %v", err))
@@ -122,7 +122,7 @@ func (apiConfig *Config) PostPlanHandler(w http.ResponseWriter, r *http.Request,
 			return
 		}
 
-		err = apiConfig.DB.UpdatePlanCode(r.Context(), database.UpdatePlanCodeParams{
+		err = cfg.DB.UpdatePlanCode(r.Context(), database.UpdatePlanCodeParams{
 			PlanCode: sql.NullString{
 				Valid:  true,
 				String: res.PlanCode,
@@ -141,8 +141,8 @@ func (apiConfig *Config) PostPlanHandler(w http.ResponseWriter, r *http.Request,
 
 }
 
-func (apiConfig *Config) GetPlansHandler(w http.ResponseWriter, r *http.Request, user User) {
-	plans, err := apiConfig.DB.GetPlans(r.Context())
+func (cfg *Config) GetPlansHandler(w http.ResponseWriter, r *http.Request, user User) {
+	plans, err := cfg.DB.GetPlans(r.Context())
 	if err != nil {
 		log.Println("db error on get plans. err: ", err)
 		helpers.RespondWithError(w, http.StatusInternalServerError, "db error on get plans")
@@ -155,7 +155,7 @@ func (apiConfig *Config) GetPlansHandler(w http.ResponseWriter, r *http.Request,
 
 }
 
-func (apiConfig *Config) PostPlanSubPageHandler(w http.ResponseWriter, r *http.Request, user User) {
+func (cfg *Config) PostPlanSubPageHandler(w http.ResponseWriter, r *http.Request, user User) {
 	body := struct {
 		PlanID           uuid.UUID `json:"plan_id"`
 		SubscriptionPage string    `json:"subscription_page"`
@@ -174,7 +174,7 @@ func (apiConfig *Config) PostPlanSubPageHandler(w http.ResponseWriter, r *http.R
 		helpers.RespondWithError(w, http.StatusBadRequest, "empty subscription_page")
 		return
 	}
-	err = apiConfig.DB.UpdatePLanSubscriptionPage(r.Context(), database.UpdatePLanSubscriptionPageParams{
+	err = cfg.DB.UpdatePLanSubscriptionPage(r.Context(), database.UpdatePLanSubscriptionPageParams{
 		SubscriptionPage: sql.NullString{
 			Valid:  true,
 			String: body.SubscriptionPage,

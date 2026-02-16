@@ -21,7 +21,7 @@ func ErrorReady(w http.ResponseWriter, r *http.Request) {
 	helpers.RespondWithError(w, 200, "this is an error test")
 }
 
-func (apiConfig *Config) AnalyzeHandler(w http.ResponseWriter, r *http.Request, user User) {
+func (cfg *Config) AnalyzeHandler(w http.ResponseWriter, r *http.Request, user User) {
 	body := struct {
 		SessionID string `json:"session_id"`
 	}{}
@@ -40,13 +40,13 @@ func (apiConfig *Config) AnalyzeHandler(w http.ResponseWriter, r *http.Request, 
 		helpers.RespondWithError(w, http.StatusInternalServerError, "error parsing uuid. err: "+err.Error())
 		return
 	}
-	session, err := apiConfig.DB.GetSession(r.Context(), sessionUUid)
+	session, err := cfg.DB.GetSession(r.Context(), sessionUUid)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, "error getting session from db. err: "+err.Error())
 		return
 	}
 	//  set session status to pending
-	err = apiConfig.DB.UpdateSessionStatus(r.Context(), database.UpdateSessionStatusParams{
+	err = cfg.DB.UpdateSessionStatus(r.Context(), database.UpdateSessionStatusParams{
 		ID:     session.ID,
 		Status: "pending",
 	})
@@ -56,7 +56,7 @@ func (apiConfig *Config) AnalyzeHandler(w http.ResponseWriter, r *http.Request, 
 	}
 
 	// publish the session
-	err = apiConfig.PublishSession(DbSessionToModelSession(session))
+	err = cfg.PublishSession(DbSessionToModelSession(session))
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, "error queing session. err: "+err.Error())
 		return
@@ -65,7 +65,7 @@ func (apiConfig *Config) AnalyzeHandler(w http.ResponseWriter, r *http.Request, 
 	helpers.RespondWithJson(w, http.StatusOK, "workflow queued")
 }
 
-func (apiConfig *Config) PresignUploadHandler(w http.ResponseWriter, r *http.Request, user User) {
+func (cfg *Config) PresignUploadHandler(w http.ResponseWriter, r *http.Request, user User) {
 	sessionID := chi.URLParam(r, "id")
 	var body struct {
 		Filename string `json:"file_name"`
@@ -90,12 +90,12 @@ func (apiConfig *Config) PresignUploadHandler(w http.ResponseWriter, r *http.Req
 	} else {
 		objectKey = fmt.Sprintf("sessions/%s/resume.%s", sessionID, body.MimeType)
 	}
-	client := s3.NewFromConfig(*apiConfig.AwsConfig, func(o *s3.Options) {
-		o.BaseEndpoint = aws.String(fmt.Sprintf("https://%s.r2.cloudflarestorage.com", apiConfig.R2.AccountID))
+	client := s3.NewFromConfig(*cfg.AwsConfig, func(o *s3.Options) {
+		o.BaseEndpoint = aws.String(fmt.Sprintf("https://%s.r2.cloudflarestorage.com", cfg.R2.AccountID))
 	})
 	presignClient := s3.NewPresignClient(client)
 	presignResult, err := presignClient.PresignPutObject(context.TODO(), &s3.PutObjectInput{
-		Bucket:      aws.String(apiConfig.R2.Bucket),
+		Bucket:      aws.String(cfg.R2.Bucket),
 		Key:         aws.String(objectKey),
 		ContentType: aws.String(body.MimeType),
 	})
@@ -114,7 +114,7 @@ func (apiConfig *Config) PresignUploadHandler(w http.ResponseWriter, r *http.Req
 
 }
 
-func (apiConfig *Config) UploadCompleteHandler(w http.ResponseWriter, r *http.Request, user User) {
+func (cfg *Config) UploadCompleteHandler(w http.ResponseWriter, r *http.Request, user User) {
 	var body struct {
 		SessionID  string `json:"session_id"`
 		ObjectKey  string `json:"object_key"`
@@ -154,9 +154,9 @@ func (apiConfig *Config) UploadCompleteHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 	// If user is job seeker just update the resume for that session and create one if session has no resume
-	resumeExists, _ := apiConfig.DB.ResumeExists(r.Context(), sessionUUid)
+	resumeExists, _ := cfg.DB.ResumeExists(r.Context(), sessionUUid)
 	if user.Role == "job_seeker" && resumeExists {
-		err = apiConfig.DB.UpdateResumeStorageUrlForSession(r.Context(), database.UpdateResumeStorageUrlForSessionParams{
+		err = cfg.DB.UpdateResumeStorageUrlForSession(r.Context(), database.UpdateResumeStorageUrlForSessionParams{
 			StorageUrl:       body.StorageUrl,
 			ObjectKey:        body.ObjectKey,
 			OriginalFilename: body.Filename,
@@ -175,7 +175,7 @@ func (apiConfig *Config) UploadCompleteHandler(w http.ResponseWriter, r *http.Re
 		return
 
 	}
-	_, err = apiConfig.DB.CreateResume(r.Context(), database.CreateResumeParams{
+	_, err = cfg.DB.CreateResume(r.Context(), database.CreateResumeParams{
 		SessionID:        sessionUUid,
 		ObjectKey:        body.ObjectKey,
 		OriginalFilename: body.Filename,

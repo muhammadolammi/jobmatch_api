@@ -16,7 +16,7 @@ import (
 )
 
 // Middleware to check for the API key in the authorization header for all POST, PUT, DELETE, and OPTIONS requests
-func (apiConfig *Config) ClientAuth() func(http.Handler) http.Handler {
+func (cfg *Config) ClientAuth() func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// if r.Method == http.MethodOptions {
@@ -53,7 +53,7 @@ func (apiConfig *Config) ClientAuth() func(http.Handler) http.Handler {
 				helpers.RespondWithError(w, http.StatusUnauthorized, "empty client api key in request.")
 				return
 			}
-			if clientApiKey != apiConfig.ClientApiKey {
+			if clientApiKey != cfg.ClientApiKey {
 				log.Println("invalid client api key in request.")
 				helpers.RespondWithError(w, http.StatusUnauthorized, "invalid client api key in request.")
 				return
@@ -63,7 +63,7 @@ func (apiConfig *Config) ClientAuth() func(http.Handler) http.Handler {
 	}
 }
 
-func (apiConfig *Config) AuthMiddleware(next func(http.ResponseWriter, *http.Request, User)) http.HandlerFunc {
+func (cfg *Config) AuthMiddleware(next func(http.ResponseWriter, *http.Request, User)) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if !strings.HasPrefix(authHeader, "Bearer ") {
@@ -76,7 +76,7 @@ func (apiConfig *Config) AuthMiddleware(next func(http.ResponseWriter, *http.Req
 		authclaims := &jwt.RegisteredClaims{}
 
 		authJwt, err := jwt.ParseWithClaims(tokenString, authclaims, func(token *jwt.Token) (interface{}, error) {
-			return []byte(apiConfig.JwtKey), nil
+			return []byte(cfg.JwtKey), nil
 		})
 		if err != nil || !authJwt.Valid {
 			helpers.RespondWithError(w, http.StatusUnauthorized, "Invalid or expired token")
@@ -100,7 +100,7 @@ func (apiConfig *Config) AuthMiddleware(next func(http.ResponseWriter, *http.Req
 			return
 		}
 
-		user, err := apiConfig.DB.GetUser(r.Context(), id)
+		user, err := cfg.DB.GetUser(r.Context(), id)
 		if err != nil {
 			helpers.RespondWithError(w, http.StatusUnauthorized, "User not found")
 			return
@@ -110,20 +110,20 @@ func (apiConfig *Config) AuthMiddleware(next func(http.ResponseWriter, *http.Req
 		next(w, r.WithContext(ctx), DbUserToModelUser(user))
 	})
 }
-func (apiConfig *Config) RateLimiter(next func(http.ResponseWriter, *http.Request, User)) http.HandlerFunc {
-	return apiConfig.AuthMiddleware(func(w http.ResponseWriter, r *http.Request, user User) {
+func (cfg *Config) RateLimiter(next func(http.ResponseWriter, *http.Request, User)) http.HandlerFunc {
+	return cfg.AuthMiddleware(func(w http.ResponseWriter, r *http.Request, user User) {
 		if user.Role == "admin" {
 			next(w, r, user)
 			return
 		}
 		now := time.Now()
-		usage, err := apiConfig.DB.GetUserUsage(r.Context(), user.ID)
+		usage, err := cfg.DB.GetUserUsage(r.Context(), user.ID)
 		switch {
 		// ✅ First-time usage
 		case err == sql.ErrNoRows:
-			err = apiConfig.DB.InsertUserUsage(r.Context(), database.InsertUserUsageParams{
+			err = cfg.DB.InsertUserUsage(r.Context(), database.InsertUserUsageParams{
 				UserID:     user.ID,
-				MaxDaily:   int32(apiConfig.RateLimit),
+				MaxDaily:   int32(cfg.RateLimit),
 				Count:      1,
 				LastUsedAt: now,
 			})
@@ -150,14 +150,14 @@ func (apiConfig *Config) RateLimiter(next func(http.ResponseWriter, *http.Reques
 					return
 				}
 
-				_ = apiConfig.DB.UpdateUserUsage(r.Context(), database.UpdateUserUsageParams{
+				_ = cfg.DB.UpdateUserUsage(r.Context(), database.UpdateUserUsageParams{
 					UserID:     user.ID,
 					Count:      usage.Count + 1,
 					LastUsedAt: now,
 				})
 			} else {
 				// new day
-				_ = apiConfig.DB.UpdateUserUsage(r.Context(), database.UpdateUserUsageParams{
+				_ = cfg.DB.UpdateUserUsage(r.Context(), database.UpdateUserUsageParams{
 					UserID:     user.ID,
 					Count:      1,
 					LastUsedAt: now,
@@ -170,8 +170,8 @@ func (apiConfig *Config) RateLimiter(next func(http.ResponseWriter, *http.Reques
 	})
 }
 
-func (apiConfig *Config) RoleMiddleware(allowedRoles []string, next func(http.ResponseWriter, *http.Request, User)) http.HandlerFunc {
-	return apiConfig.AuthMiddleware(func(w http.ResponseWriter, r *http.Request, user User) {
+func (cfg *Config) RoleMiddleware(allowedRoles []string, next func(http.ResponseWriter, *http.Request, User)) http.HandlerFunc {
+	return cfg.AuthMiddleware(func(w http.ResponseWriter, r *http.Request, user User) {
 		for _, role := range allowedRoles {
 			if user.Role == role {
 				next(w, r, user)

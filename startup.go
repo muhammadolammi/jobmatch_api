@@ -27,6 +27,11 @@ func buildConfig() handlers.Config {
 		// log.Fatal("empty DB_URL in environment")
 		log.Println("empty DB_URL in environment")
 	}
+	projectId := os.Getenv("PROJECT_ID")
+	if projectId == "" {
+		// log.Fatal("empty PROJECT_ID in environment")
+		log.Println("empty PROJECT_ID in environment")
+	}
 
 	rabbitmqUrl := os.Getenv("RABBITMQ_URL")
 	if rabbitmqUrl == "" {
@@ -92,6 +97,7 @@ func buildConfig() handlers.Config {
 	}
 	apiConfig := handlers.Config{
 		// DB : dbqueries,
+		ProjectId:    projectId,
 		DBURL:        dbUrl,
 		RABBITMQUrl:  rabbitmqUrl,
 		Port:         port,

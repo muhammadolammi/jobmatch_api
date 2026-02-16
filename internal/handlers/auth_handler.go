@@ -18,7 +18,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func (apiConfig *Config) RegisterHandler(w http.ResponseWriter, r *http.Request) {
+func (cfg *Config) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 	body := struct {
 		Email           string `json:"email"`
 		Password        string `json:"password"`
@@ -52,7 +52,7 @@ func (apiConfig *Config) RegisterHandler(w http.ResponseWriter, r *http.Request)
 	}
 
 	// check if user exist
-	userExist, err := apiConfig.DB.UserExists(r.Context(), body.Email)
+	userExist, err := cfg.DB.UserExists(r.Context(), body.Email)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error validating user. err: %v", err))
 		return
@@ -110,7 +110,7 @@ func (apiConfig *Config) RegisterHandler(w http.ResponseWriter, r *http.Request)
 	}
 	body.Email = strings.ToLower(strings.TrimSpace(body.Email))
 
-	user, err := apiConfig.DB.CreateUser(r.Context(), database.CreateUserParams{
+	user, err := cfg.DB.CreateUser(r.Context(), database.CreateUserParams{
 		Email:    body.Email,
 		Password: string(hashedPassword),
 		Role:     body.Role,
@@ -121,7 +121,7 @@ func (apiConfig *Config) RegisterHandler(w http.ResponseWriter, r *http.Request)
 	}
 	//  create detail base on role
 	if user.Role == "employer" {
-		_, err = apiConfig.DB.CreateEmployer(r.Context(), database.CreateEmployerParams{
+		_, err = cfg.DB.CreateEmployer(r.Context(), database.CreateEmployerParams{
 			UserID:          user.ID,
 			CompanyName:     body.CompanyName,
 			CompanyWebsite:  body.CompanyWebsite,
@@ -136,7 +136,7 @@ func (apiConfig *Config) RegisterHandler(w http.ResponseWriter, r *http.Request)
 
 	}
 	if user.Role == "job_seeker" {
-		_, err = apiConfig.DB.CreateJobSeeker(r.Context(), database.CreateJobSeekerParams{
+		_, err = cfg.DB.CreateJobSeeker(r.Context(), database.CreateJobSeekerParams{
 			UserID:    user.ID,
 			LastName:  body.LastName,
 			FirstName: body.FirstName,
@@ -149,7 +149,7 @@ func (apiConfig *Config) RegisterHandler(w http.ResponseWriter, r *http.Request)
 	helpers.RespondWithJson(w, 200, "signup successful")
 }
 
-func (apiConfig *Config) LoginHandler(w http.ResponseWriter, r *http.Request) {
+func (cfg *Config) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	body := struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -171,7 +171,7 @@ func (apiConfig *Config) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	body.Email = strings.ToLower(strings.TrimSpace(body.Email))
 
-	userExist, err := apiConfig.DB.UserExists(r.Context(), body.Email)
+	userExist, err := cfg.DB.UserExists(r.Context(), body.Email)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error validating user. err: %v", err))
 		return
@@ -181,7 +181,7 @@ func (apiConfig *Config) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := apiConfig.DB.GetUserWithEmail(r.Context(), body.Email)
+	user, err := cfg.DB.GetUserWithEmail(r.Context(), body.Email)
 
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error getting user. err: %v", err))
@@ -198,12 +198,12 @@ func (apiConfig *Config) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// create refresh token
 
-	err = auth.CreateRefreshToken([]byte(apiConfig.JwtKey), user.ID, apiConfig.RefreshTokenEXpirationTime, w, apiConfig.DB)
+	err = auth.CreateRefreshToken([]byte(cfg.JwtKey), user.ID, cfg.RefreshTokenEXpirationTime, w, cfg.DB)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error creating refresh token. err: %v", err))
 		return
 	}
-	access_token, err := auth.MakeJwtTokenString([]byte(apiConfig.JwtKey), user.ID.String(), "access_token", apiConfig.AcessTokenEXpirationTime)
+	access_token, err := auth.MakeJwtTokenString([]byte(cfg.JwtKey), user.ID.String(), "access_token", cfg.AcessTokenEXpirationTime)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error creating access token. err: %v", err))
 		return
@@ -218,7 +218,7 @@ func (apiConfig *Config) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	helpers.RespondWithJson(w, 200, response)
 }
 
-func (apiConfig *Config) PasswordChangeHandler(w http.ResponseWriter, r *http.Request) {
+func (cfg *Config) PasswordChangeHandler(w http.ResponseWriter, r *http.Request) {
 
 	body := struct {
 		Email       string `json:"email"`
@@ -244,7 +244,7 @@ func (apiConfig *Config) PasswordChangeHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	user, err := apiConfig.DB.GetUserWithEmail(r.Context(), body.Email)
+	user, err := cfg.DB.GetUserWithEmail(r.Context(), body.Email)
 
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error getting user. err: %v", err))
@@ -267,7 +267,7 @@ func (apiConfig *Config) PasswordChangeHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	err = apiConfig.DB.UpdatePassword(r.Context(), database.UpdatePasswordParams{
+	err = cfg.DB.UpdatePassword(r.Context(), database.UpdatePasswordParams{
 		Email:    body.Email,
 		Password: string(newHashedPassword),
 	})
@@ -275,7 +275,7 @@ func (apiConfig *Config) PasswordChangeHandler(w http.ResponseWriter, r *http.Re
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error updating password. err: %v", err))
 		return
 	}
-	err = auth.UpdateRefreshToken([]byte(apiConfig.JwtKey), user.ID, 24*7*60, w, apiConfig.DB)
+	err = auth.UpdateRefreshToken([]byte(cfg.JwtKey), user.ID, 24*7*60, w, cfg.DB)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error updating refresh token. err: %v", err))
 		return
@@ -283,32 +283,32 @@ func (apiConfig *Config) PasswordChangeHandler(w http.ResponseWriter, r *http.Re
 	helpers.RespondWithJson(w, 200, "Password Updated")
 }
 
-func (apiConfig *Config) GetUserHandler(w http.ResponseWriter, r *http.Request, user User) {
+func (cfg *Config) GetUserHandler(w http.ResponseWriter, r *http.Request, user User) {
 
 	// 1. Default display name is the email prefix (fallback)
 	displayName := strings.Split(user.Email, "@")[0]
 
 	switch user.Role {
 	case "job_seeker":
-		profile, err := apiConfig.DB.GetJobSeekerProfileByUserID(r.Context(), user.ID)
+		profile, err := cfg.DB.GetJobSeekerProfileByUserID(r.Context(), user.ID)
 		if err == nil {
 			displayName = profile.FirstName
 		}
 	case "employer":
-		profile, err := apiConfig.DB.GetEmployerProfileByUserID(r.Context(), user.ID)
+		profile, err := cfg.DB.GetEmployerProfileByUserID(r.Context(), user.ID)
 		if err == nil {
 			displayName = profile.CompanyName
 		}
 	case "admin":
 		// Try Job Seeker first
-		jsProfile, err := apiConfig.DB.GetJobSeekerProfileByUserID(r.Context(), user.ID)
+		jsProfile, err := cfg.DB.GetJobSeekerProfileByUserID(r.Context(), user.ID)
 		if err == nil {
 			displayName = jsProfile.FirstName
 			break // Stop here if found
 		}
 
 		// Fallback to Employer check
-		empProfile, err := apiConfig.DB.GetEmployerProfileByUserID(r.Context(), user.ID)
+		empProfile, err := cfg.DB.GetEmployerProfileByUserID(r.Context(), user.ID)
 		if err == nil {
 			displayName = empProfile.CompanyName
 		}
@@ -325,7 +325,7 @@ func (apiConfig *Config) GetUserHandler(w http.ResponseWriter, r *http.Request, 
 	helpers.RespondWithJson(w, http.StatusOK, res)
 }
 
-func (apiConfig *Config) RefreshTokens(w http.ResponseWriter, r *http.Request) {
+func (cfg *Config) RefreshTokens(w http.ResponseWriter, r *http.Request) {
 	refreshtoken, err := r.Cookie("refresh_token")
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error getting refreshToken, Try login again. err: %v", err))
@@ -337,7 +337,7 @@ func (apiConfig *Config) RefreshTokens(w http.ResponseWriter, r *http.Request) {
 	_, err = jwt.ParseWithClaims(
 		refreshtoken.Value,
 		refreshclaims,
-		func(token *jwt.Token) (interface{}, error) { return []byte(apiConfig.JwtKey), nil },
+		func(token *jwt.Token) (interface{}, error) { return []byte(cfg.JwtKey), nil },
 	)
 
 	if err != nil {
@@ -345,7 +345,7 @@ func (apiConfig *Config) RefreshTokens(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Make sure refresh token exist in db
-	refreshTokenExists, err := apiConfig.DB.RefreshTokenExists(context.Background(), refreshtoken.Value)
+	refreshTokenExists, err := cfg.DB.RefreshTokenExists(context.Background(), refreshtoken.Value)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error checking refresh token in db. err: %v", err))
 		return
@@ -361,7 +361,7 @@ func (apiConfig *Config) RefreshTokens(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := apiConfig.DB.GetUser(r.Context(), userId)
+	user, err := cfg.DB.GetUser(r.Context(), userId)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error getting user with id, err: %v", err))
 		return
@@ -374,18 +374,18 @@ func (apiConfig *Config) RefreshTokens(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// invalidate current refresh token
-	err = apiConfig.DB.DeleteRefreshToken(context.Background(), refreshtoken.Value)
+	err = cfg.DB.DeleteRefreshToken(context.Background(), refreshtoken.Value)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error invalidating refresh token, err: %v", err))
 		return
 	}
 	// make new refresh token
-	err = auth.CreateRefreshToken([]byte(apiConfig.JwtKey), userId, apiConfig.RefreshTokenEXpirationTime, w, apiConfig.DB)
+	err = auth.CreateRefreshToken([]byte(cfg.JwtKey), userId, cfg.RefreshTokenEXpirationTime, w, cfg.DB)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error creating refresh token, err: %v", err))
 		return
 	}
-	access_token, err := auth.MakeJwtTokenString([]byte(apiConfig.JwtKey), user.ID.String(), "access_token", apiConfig.AcessTokenEXpirationTime)
+	access_token, err := auth.MakeJwtTokenString([]byte(cfg.JwtKey), user.ID.String(), "access_token", cfg.AcessTokenEXpirationTime)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error creating access token. err: %v", err))
 		return
@@ -399,7 +399,7 @@ func (apiConfig *Config) RefreshTokens(w http.ResponseWriter, r *http.Request) {
 	helpers.RespondWithJson(w, 200, response)
 }
 
-func (apiConfig *Config) Validate(w http.ResponseWriter, r *http.Request) {
+func (cfg *Config) Validate(w http.ResponseWriter, r *http.Request) {
 
 	helpers.RespondWithJson(w, 200, "logged in")
 }

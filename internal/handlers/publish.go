@@ -9,7 +9,7 @@ import (
 )
 
 // func (apiConfig *Config) PublishSession(session Session, rabbitChan *amqp.Channel) error {
-func (apiConfig *Config) PublishSession(session Session) error {
+func (cfg *Config) PublishSession(session Session) error {
 
 	// defer rabbitChan.Close()
 
@@ -71,13 +71,24 @@ func (apiConfig *Config) PublishSession(session Session) error {
 
 	// using google pub/sub
 	ctx := context.Background()
-	topic := apiConfig.PubSubClient.Topic("resume-analysis")
+	if cfg.PubSubClient == nil {
+		log.Println("PubSub client is not initialized")
+		client, err := pubsub.NewClient(ctx, cfg.ProjectId)
+		if err != nil {
+			log.Println("Failed to reinitialize Pub/Sub client:", err)
+			return err
+		}
+		cfg.PubSubClient = client
+		log.Println("✅ Pub/Sub client reinitialized")
+		return nil
+	}
+	publisher := cfg.PubSubClient.Publisher("resume-analysis")
 	payload := map[string]string{
 		"session_id": session.ID.String(),
 	}
 
 	data, _ := json.Marshal(payload)
-	result := topic.Publish(ctx, &pubsub.Message{
+	result := publisher.Publish(ctx, &pubsub.Message{
 		Data: data,
 	})
 

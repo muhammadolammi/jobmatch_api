@@ -14,7 +14,7 @@ import (
 	"github.com/muhammadolammi/jobmatchapi/internal/helpers"
 )
 
-func (apiConfig *Config) CreateSession(w http.ResponseWriter, r *http.Request, user User) {
+func (cfg *Config) CreateSession(w http.ResponseWriter, r *http.Request, user User) {
 	body := struct {
 		Name           string `json:"name"`
 		JobTitle       string `json:"job_title"`
@@ -39,7 +39,7 @@ func (apiConfig *Config) CreateSession(w http.ResponseWriter, r *http.Request, u
 		helpers.RespondWithError(w, http.StatusInternalServerError, "session job_description can't be empty")
 		return
 	}
-	session, err := apiConfig.DB.CreateSession(r.Context(), database.CreateSessionParams{
+	session, err := cfg.DB.CreateSession(r.Context(), database.CreateSessionParams{
 		Name:           body.Name,
 		UserID:         user.ID,
 		JobTitle:       body.JobTitle,
@@ -55,8 +55,8 @@ func (apiConfig *Config) CreateSession(w http.ResponseWriter, r *http.Request, u
 	helpers.RespondWithJson(w, http.StatusOK, DbSessionToModelSession(session))
 }
 
-func (apiConfig *Config) GetSessions(w http.ResponseWriter, r *http.Request, user User) {
-	sessions, err := apiConfig.DB.GetUserSessions(r.Context(), user.ID)
+func (cfg *Config) GetSessions(w http.ResponseWriter, r *http.Request, user User) {
+	sessions, err := cfg.DB.GetUserSessions(r.Context(), user.ID)
 	if err != nil {
 		msg := fmt.Sprintf("error getting sessions. err: %v", err)
 		log.Println(msg)
@@ -67,7 +67,7 @@ func (apiConfig *Config) GetSessions(w http.ResponseWriter, r *http.Request, use
 	helpers.RespondWithJson(w, http.StatusOK, DbSessionsToModelSessions(sessions))
 }
 
-func (apiConfig *Config) HandleSessionUpdates(w http.ResponseWriter, r *http.Request, user User) {
+func (cfg *Config) HandleSessionUpdates(w http.ResponseWriter, r *http.Request, user User) {
 	sessionID := chi.URLParam(r, "id")
 
 	w.Header().Set("Content-Type", "text/event-stream")
@@ -80,7 +80,7 @@ func (apiConfig *Config) HandleSessionUpdates(w http.ResponseWriter, r *http.Req
 	}
 
 	// Consume RabbitMQ queue
-	ch, err := apiConfig.RabbitConn.Channel()
+	ch, err := cfg.RabbitConn.Channel()
 	if err != nil {
 		http.Error(w, "Failed to connect to RabbitMQ", http.StatusInternalServerError)
 		return
@@ -159,7 +159,7 @@ func (apiConfig *Config) HandleSessionUpdates(w http.ResponseWriter, r *http.Req
 	}
 }
 
-func (apiConfig *Config) GetSession(w http.ResponseWriter, r *http.Request, user User) {
+func (cfg *Config) GetSession(w http.ResponseWriter, r *http.Request, user User) {
 	sessionIDString := chi.URLParam(r, "id")
 	sessionID, err := uuid.Parse(sessionIDString)
 	if err != nil {
@@ -170,7 +170,7 @@ func (apiConfig *Config) GetSession(w http.ResponseWriter, r *http.Request, user
 
 	}
 
-	session, err := apiConfig.DB.GetSession(r.Context(), sessionID)
+	session, err := cfg.DB.GetSession(r.Context(), sessionID)
 	if err != nil {
 		msg := fmt.Sprintf("error getting session. err: %v", err)
 		log.Println(msg)
