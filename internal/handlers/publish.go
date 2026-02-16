@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 
 	"cloud.google.com/go/pubsub/v2"
@@ -71,11 +72,14 @@ func (apiConfig *Config) PublishSession(session Session) error {
 	// using google pub/sub
 	ctx := context.Background()
 	topic := apiConfig.PubSubClient.Topic("resume-analysis")
+	payload := map[string]string{
+		"session_id": session.ID.String(),
+	}
+
+	data, _ := json.Marshal(payload)
 	result := topic.Publish(ctx, &pubsub.Message{
-		Data: []byte("resume-analysis"),
-		Attributes: map[string]string{
-			"session_id": session.ID.String(),
-		}})
+		Data: data,
+	})
 
 	id, err := result.Get(ctx)
 	if err != nil {
