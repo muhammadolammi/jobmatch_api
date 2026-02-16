@@ -17,9 +17,9 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go infra.ConnectRabbit(ctx, &cfg)
-	go infra.LoadAWSConfig(&cfg, cfg.R2)
-	go infra.ConnectPubSub(ctx, &cfg)
+	infra.ConnectRabbit(ctx, &cfg)
+	infra.LoadAWSConfig(&cfg, cfg.R2)
+	infra.ConnectPubSub(ctx, &cfg)
 	infra.ConnectDB(ctx, &cfg)
 
 	server(&cfg)
