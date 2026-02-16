@@ -21,5 +21,6 @@ func main() {
 	go infra.ConnectRabbit(ctx, &cfg)
 	go infra.LoadAWSConfig(&cfg, cfg.R2)
 	go infra.ConnectPubSub(ctx, &cfg)
+
 	server(&cfg)
 }
