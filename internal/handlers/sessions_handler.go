@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -137,14 +139,22 @@ func (apiConfig *Config) HandleSessionUpdates(w http.ResponseWriter, r *http.Req
 
 	// log.Println("logging sse")
 	ctx := r.Context()
+	ticker := time.NewTicker(20 * time.Second)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
+		case <-ticker.C: // NEW: Send a heartbeat comment
+			fmt.Fprintf(w, ":keep-alive\n\n")
+			flusher.Flush()
 		case d := <-msgs:
 			// log.Println(string(d.Body))
 			fmt.Fprintf(w, "data: %s\n\n", d.Body)
 			flusher.Flush()
+			if strings.Contains(string(d.Body), "completed") {
+				return
+			}
 		}
 	}
 }

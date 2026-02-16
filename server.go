@@ -23,10 +23,12 @@ func server(apiConfig *handlers.Config) {
 			"Authorization",
 			"X-Requested-With",
 			"client-api-key",
+			"X-CSRF-Token",
 			"x-paystack-signature",
+			"Accept",
 		},
 		AllowCredentials: true,
-		MaxAge:           300, // Maximum age for cache, in seconds
+		MaxAge:           300,
 	}
 	router := chi.NewRouter()
 	apiRoute := chi.NewRouter()
