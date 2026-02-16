@@ -30,14 +30,13 @@ func server(apiConfig *handlers.Config) {
 	}
 	router := chi.NewRouter()
 	apiRoute := chi.NewRouter()
+	router.Use(cors.Handler(corsOptions))
 	// ADD MIDDLREWARE
 	// A good base middleware stack
 	router.Use(middleware.RequestID)
 	router.Use(middleware.RealIP)
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
-
-	router.Use(cors.Handler(corsOptions))
 	router.Use(apiConfig.ClientAuth())
 
 	// ADD ROUTES
