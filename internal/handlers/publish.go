@@ -68,7 +68,7 @@ func (cfg *Config) PublishSession(session Session) error {
 	// 	return fmt.Errorf("worker returned non-200 status: %d", resp.StatusCode)
 	// }
 	// return nil
-
+	log.Println("Publishing session to Pub/Sub with session ID:", session.ID.String())
 	// using google pub/sub
 	ctx := context.Background()
 	if cfg.PubSubClient == nil {

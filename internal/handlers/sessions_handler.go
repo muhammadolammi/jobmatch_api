@@ -85,8 +85,6 @@ func (cfg *Config) HandleSessionUpdates(w http.ResponseWriter, r *http.Request, 
 		http.Error(w, "Failed to connect to RabbitMQ", http.StatusInternalServerError)
 		return
 	}
-	defer ch.Close()
-
 	// Declare topic exchange
 	err = ch.ExchangeDeclare(
 		"session_updates",
