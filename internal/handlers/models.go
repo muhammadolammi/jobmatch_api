@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/google/uuid"
 	"github.com/muhammadolammi/jobmatchapi/internal/database"
@@ -21,6 +22,7 @@ type Config struct {
 	AwsConfig                  *aws.Config
 	RABBITMQUrl                string
 	RabbitConn                 *amqp.Connection
+	PubSubClient               *pubsub.Client
 	RabbitChan                 *amqp.Channel
 	RefreshTokenEXpirationTime int //in minute
 	AcessTokenEXpirationTime   int //in minute

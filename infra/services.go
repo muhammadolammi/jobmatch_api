@@ -6,6 +6,7 @@ import (
 	"log"
 	"time"
 
+	"cloud.google.com/go/pubsub"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/muhammadolammi/jobmatchapi/internal/database"
@@ -45,6 +46,11 @@ func ConnectRabbit(ctx context.Context, cfg *handlers.Config) {
 		log.Println("✅ RabbitMQ connected")
 		return
 	}
+}
+func ConnectPubSub(ctx context.Context, cfg *handlers.Config) {
+	client, _ := pubsub.NewClient(ctx, "YOUR_PROJECT_ID")
+	cfg.PubSubClient = client
+	log.Println("✅ Pub/Sub client initialized")
 }
 
 func ConnectDB(ctx context.Context, cfg *handlers.Config) {
