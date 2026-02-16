@@ -30,6 +30,7 @@ type Config struct {
 
 	HttpClient *http.Client // this should be used for all internal and external http communication
 	ENV        string
+	// WorkerApi  string
 }
 
 type EmployerProfile struct {

@@ -81,6 +81,11 @@ func buildConfig() handlers.Config {
 		// log.Fatal("empty PAYSTACK_SECRET_KEY in environment")
 		log.Println("empty PAYSTACK_SECRET_KEY in environment")
 	}
+	// workerApi := os.Getenv("WORKER_API")
+	// if workerApi == "" {
+	// 	// log.Fatal("empty WORKER_API in environment")
+	// 	log.Println("empty WORKER_API in environment")
+	// }
 
 	httpClient := http.Client{
 		Timeout: time.Minute,
@@ -102,6 +107,7 @@ func buildConfig() handlers.Config {
 		HttpClient:        &httpClient,
 		PaystackSecretKey: paystackSecretKey,
 		ENV:               environment,
+		// WorkerApi:         workerApi,
 	}
 	return apiConfig
 }

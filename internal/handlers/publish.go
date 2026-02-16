@@ -8,6 +8,7 @@ import (
 )
 
 func (apiConfig *Config) PublishSession(session Session, rabbitChan *amqp.Channel) error {
+	// func (apiConfig *Config) PublishSession(session Session) error {
 
 	defer rabbitChan.Close()
 
@@ -44,5 +45,27 @@ func (apiConfig *Config) PublishSession(session Session, rabbitChan *amqp.Channe
 	}
 	// log.Println("session saved to db and published")
 	return nil
+
+	// lets send a simple http post request to the worker instead of using rabbitmq for now, we can switch to rabbitmq later if needed
+	// workerURL := apiConfig.WorkerApi + "/process-session"
+	// jsonData, err := json.Marshal(session)
+	// if err != nil {
+	// 	return fmt.Errorf("error marshalling session. err: %v", err)
+	// }
+	// req, err := http.NewRequest("POST", workerURL, bytes.NewBuffer(jsonData))
+	// if err != nil {
+	// 	return fmt.Errorf("error creating request to worker. err: %v", err)
+	// }
+	// req.Header.Set("Content-Type", "application/json")
+	// client := apiConfig.HttpClient
+	// resp, err := client.Do(req)
+	// if err != nil {
+	// 	return fmt.Errorf("error sending request to worker. err: %v", err)
+	// }
+	// defer resp.Body.Close()
+	// if resp.StatusCode != http.StatusOK {
+	// 	return fmt.Errorf("worker returned non-200 status: %d", resp.StatusCode)
+	// }
+	// return nil
 
 }
