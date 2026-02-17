@@ -110,3 +110,41 @@ func DbSubscriptionsToModelSubscriptions(dbSubs []database.Subscription) []Subsc
 	}
 	return subs
 }
+
+// Profession model helpers
+func DbProfessionToModelProfession(dbProfession database.Profession) Profession {
+	return Profession{
+		ID:        dbProfession.ID,
+		Name:      dbProfession.Name,
+		CreatedAt: dbProfession.CreatedAt,
+		UpdatedAt: dbProfession.UpdatedAt,
+	}
+
+}
+
+func DbProfessionsToModelProfessions(dbProfessions []database.Profession) []Profession {
+	professions := []Profession{}
+	for _, dbProfession := range dbProfessions {
+		professions = append(professions, DbProfessionToModelProfession(dbProfession))
+	}
+	return professions
+}
+
+// User Profession model helpers
+func DbUserProfessionToModelUserProfession(dbUserProfession database.UserProfession) UserProfession {
+	return UserProfession{
+		ID:           dbUserProfession.ID,
+		UserID:       dbUserProfession.UserID,
+		ProfessionID: dbUserProfession.ProfessionID,
+		CreatedAt:    dbUserProfession.CreatedAt,
+	}
+
+}
+
+func DbUserProfessionsToModelUserProfessions(dbUserProfessions []database.UserProfession) []UserProfession {
+	userProfessions := []UserProfession{}
+	for _, dbUserProfession := range dbUserProfessions {
+		userProfessions = append(userProfessions, DbUserProfessionToModelUserProfession(dbUserProfession))
+	}
+	return userProfessions
+}

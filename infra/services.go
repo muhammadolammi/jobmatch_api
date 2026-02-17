@@ -48,6 +48,10 @@ func ConnectRabbit(ctx context.Context, cfg *handlers.Config) {
 	}
 }
 func ConnectPubSub(ctx context.Context, cfg *handlers.Config) {
+	if cfg.ENV == "development" {
+		log.Println("⚠️  Skipping Pub/Sub connection in development environment")
+		return
+	}
 	client, err := pubsub.NewClient(ctx, cfg.ProjectId)
 	if err != nil {
 		log.Println("❌ Failed to initialize Pub/Sub client:", err)

@@ -51,6 +51,13 @@ type Plan struct {
 	UpdatedAt        time.Time
 }
 
+type Profession struct {
+	ID        uuid.UUID
+	Name      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
 type RefreshToken struct {
 	ID        uuid.UUID
 	UserID    uuid.UUID
@@ -119,4 +126,12 @@ type UserDailyUsage struct {
 	Count      int32
 	MaxDaily   int32
 	LastUsedAt time.Time
+}
+
+type UserProfession struct {
+	ID           uuid.UUID
+	UserID       uuid.UUID
+	ProfessionID uuid.UUID
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }

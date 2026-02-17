@@ -29,6 +29,7 @@ func (cfg *Config) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		CompanyWebsite  string `json:"company_website"`
 		CompanySize     int32  `json:"company_size"`
 		CompanyIndustry string `json:"company_industry"`
+		ProfessionID    string `json:"profession_id"`
 	}{}
 	decoder := json.NewDecoder(r.Body)
 	err := decoder.Decode(&body)
@@ -99,6 +100,24 @@ func (cfg *Config) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 			helpers.RespondWithError(w, http.StatusBadRequest, "Enter the user last name")
 			return
 		}
+		if body.ProfessionID == "" {
+			helpers.RespondWithError(w, http.StatusBadRequest, "Enter the user profession_id")
+			return
+		}
+		professionIDUUID, err := uuid.Parse(body.ProfessionID)
+		if err != nil {
+			helpers.RespondWithError(w, http.StatusBadRequest, "error parsing profession_id to uuid. err: "+err.Error())
+			return
+		}
+		professionExist, err := cfg.DB.ProfessionExists(r.Context(), professionIDUUID)
+		if err != nil {
+			helpers.RespondWithError(w, http.StatusInternalServerError, "error validating profession_id. err: "+err.Error())
+			return
+		}
+		if !professionExist {
+			helpers.RespondWithError(w, http.StatusBadRequest, "no profession with this id exist")
+			return
+		}
 
 	}
 	// { create the user}
@@ -143,6 +162,14 @@ func (cfg *Config) RegisterHandler(w http.ResponseWriter, r *http.Request) {
 		})
 		if err != nil {
 			helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error creating job seeker details, kindly update your details. err: %v", err))
+			return
+		}
+		_, err = cfg.DB.CreateUserProfession(r.Context(), database.CreateUserProfessionParams{
+			UserID:       user.ID,
+			ProfessionID: uuid.MustParse(body.ProfessionID),
+		})
+		if err != nil {
+			helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error creating user profession, kindly update your details. err: %v", err))
 			return
 		}
 	}

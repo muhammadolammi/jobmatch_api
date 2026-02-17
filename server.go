@@ -74,6 +74,14 @@ func server(apiConfig *handlers.Config) {
 	// webhooks
 	apiRoute.Post("/webhook/paystack", apiConfig.PaystackWebhook)
 
+	// professions
+	apiRoute.Post("/professions", apiConfig.PostProfessionsHandler)
+	apiRoute.Get("/professions", apiConfig.GetProfessionsHandler)
+
+	apiRoute.Post("/user-professions", apiConfig.AuthMiddleware(apiConfig.PostUserProfessionsHandler))
+	apiRoute.Get("/user-professions", apiConfig.AuthMiddleware(apiConfig.GetUserProfessionsHandler))
+	apiRoute.Delete("/user-professions", apiConfig.AuthMiddleware(apiConfig.DeleteUserProfessionHandler))
+
 	apiRoute.Get("/results/{sessionID}", apiConfig.GetResultHandler)
 	router.Mount("/api", apiRoute)
 	srv := &http.Server{
