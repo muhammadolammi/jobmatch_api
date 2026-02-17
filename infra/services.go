@@ -54,6 +54,7 @@ func ConnectPubSub(ctx context.Context, cfg *handlers.Config) {
 		return
 	}
 	cfg.PubSubClient = client
+
 	log.Println("✅ Pub/Sub client initialized")
 }
 

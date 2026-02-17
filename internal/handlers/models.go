@@ -13,8 +13,10 @@ import (
 )
 
 type Config struct {
-	DBURL                      string
-	DB                         *database.Queries
+	DBURL  string
+	DB     *database.Queries
+	DBConn *sql.DB
+
 	JwtKey                     string
 	ClientApiKey               string
 	Port                       string
