@@ -67,7 +67,6 @@ func (cfg *Config) AuthMiddleware(next func(http.ResponseWriter, *http.Request, 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authHeader := r.Header.Get("Authorization")
 		if !strings.HasPrefix(authHeader, "Bearer ") {
-			log.Println("aith error here")
 			helpers.RespondWithError(w, http.StatusUnauthorized, "Missing or invalid token")
 			return
 		}
