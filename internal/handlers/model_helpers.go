@@ -148,3 +148,21 @@ func DbUserProfessionsToModelUserProfessions(dbUserProfessions []database.UserPr
 	}
 	return userProfessions
 }
+
+//  Contact Departments model helper
+
+func DbContactDepartmentToModelContactDepartment(dbContactDept database.ContactDepartment) ContactDepartment {
+	return ContactDepartment{
+		ID:   dbContactDept.ID,
+		Name: dbContactDept.Name,
+	}
+
+}
+
+func DbContactDepartmentsToModelContactDepartments(dbContactDepartments []database.ContactDepartment) []ContactDepartment {
+	contactDepartments := []ContactDepartment{}
+	for _, dbContactDepartment := range dbContactDepartments {
+		contactDepartments = append(contactDepartments, DbContactDepartmentToModelContactDepartment(dbContactDepartment))
+	}
+	return contactDepartments
+}

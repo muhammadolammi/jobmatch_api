@@ -141,7 +141,7 @@ func (cfg *Config) PostPlanHandler(w http.ResponseWriter, r *http.Request, user 
 
 }
 
-func (cfg *Config) GetPlansHandler(w http.ResponseWriter, r *http.Request, user User) {
+func (cfg *Config) GetPlansHandler(w http.ResponseWriter, r *http.Request) {
 	plans, err := cfg.DB.GetPlans(r.Context())
 	if err != nil {
 		log.Println("db error on get plans. err: ", err)

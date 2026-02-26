@@ -3,11 +3,13 @@ package handlers
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -109,7 +111,7 @@ func (cfg *Config) AuthMiddleware(next func(http.ResponseWriter, *http.Request, 
 		next(w, r.WithContext(ctx), DbUserToModelUser(user))
 	})
 }
-func (cfg *Config) RateLimiter(next func(http.ResponseWriter, *http.Request, User)) http.HandlerFunc {
+func (cfg *Config) AnalyzeRateLimiter(next func(http.ResponseWriter, *http.Request, User)) http.HandlerFunc {
 	return cfg.AuthMiddleware(func(w http.ResponseWriter, r *http.Request, user User) {
 		if user.Role == "admin" {
 			next(w, r, user)
@@ -178,5 +180,78 @@ func (cfg *Config) RoleMiddleware(allowedRoles []string, next func(http.Response
 			}
 		}
 		helpers.RespondWithError(w, http.StatusForbidden, "Forbidden: insufficient permissions")
+	})
+}
+
+func (cfg *Config) ContactRateLimiter(next func(http.ResponseWriter, *http.Request, PostContactMessageBody)) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body := PostContactMessageBody{}
+		decoder := json.NewDecoder(r.Body)
+		err := decoder.Decode(&body)
+		if err != nil {
+			log.Println("here")
+			log.Println(err)
+			log.Println(body)
+
+			helpers.RespondWithError(w, http.StatusBadRequest, "error decoding request body")
+			return
+		}
+		if body.Message == "" {
+			log.Println("here")
+
+			helpers.RespondWithError(w, http.StatusBadRequest, "contact message can't be empty")
+			return
+
+		}
+		if body.FirstName == "" {
+			log.Println("here")
+
+			helpers.RespondWithError(w, http.StatusBadRequest, "contact first name can't be empty")
+			return
+
+		}
+
+		if body.LastName == "" {
+			log.Println("here")
+
+			helpers.RespondWithError(w, http.StatusBadRequest, "contact last name can't be empty")
+			return
+
+		}
+		if body.Email == "" {
+			log.Println("here")
+
+			helpers.RespondWithError(w, http.StatusBadRequest, "contact email can't be empty")
+			return
+
+		}
+		if utf8.RuneCountInString(body.Message) > 500 {
+			log.Println("here")
+
+			helpers.RespondWithError(w, http.StatusBadRequest, "message too long")
+			return
+		}
+		last24HourMessages, err := cfg.DB.GetEmailLastHourContactMessages(context.Background(), body.Email)
+		if err != nil {
+			helpers.RespondWithError(w, http.StatusBadRequest, "error validating request")
+			return
+		}
+		if last24HourMessages >= 10 {
+			helpers.RespondWithError(w, http.StatusTooManyRequests, "daily limit reached")
+			return
+
+		}
+		lastHourMessages, err := cfg.DB.GetEmailLastHourContactMessages(context.Background(), body.Email)
+		if err != nil {
+			helpers.RespondWithError(w, http.StatusBadRequest, "error validating request")
+			return
+		}
+		if lastHourMessages >= 4 {
+			helpers.RespondWithError(w, http.StatusTooManyRequests, "too many messages this hour")
+			return
+
+		}
+		next(w, r, body)
+
 	})
 }

@@ -15,8 +15,8 @@ func (cfg *Config) PostUserProfessionsHandler(w http.ResponseWriter, r *http.Req
 		ProfessionID string `json:"profession_id"`
 		UserID       string `json:"user_id"`
 	}{}
-	encoder := json.NewDecoder(r.Body)
-	err := encoder.Decode(&body)
+	decoder := json.NewDecoder(r.Body)
+	err := decoder.Decode(&body)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, "error decoding request body. err: "+err.Error())
 		return

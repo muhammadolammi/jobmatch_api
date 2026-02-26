@@ -20,6 +20,21 @@ type AnalysesResult struct {
 	UpdatedAt time.Time
 }
 
+type ContactDepartment struct {
+	ID   uuid.UUID
+	Name string
+}
+
+type ContactMessage struct {
+	ID                  uuid.UUID
+	FirstName           string
+	LastName            string
+	Email               string
+	ContactDepartmentID uuid.UUID
+	Message             string
+	CreatedAt           sql.NullTime
+}
+
 type EmployerProfile struct {
 	ID              uuid.UUID
 	CompanyName     string
