@@ -60,13 +60,13 @@ func server(apiConfig *handlers.Config) {
 
 	// analyze
 	apiRoute.Post("/uploads/complete", apiConfig.AuthMiddleware(apiConfig.UploadCompleteHandler))
-	apiRoute.Post("/analyze", apiConfig.RateLimiter(apiConfig.AnalyzeHandler))
+	apiRoute.Post("/analyze", apiConfig.AnalyzeRateLimiter(apiConfig.AnalyzeHandler))
 
 	// plans & subscription
 	apiRoute.Post("/plans", apiConfig.RoleMiddleware([]string{"admin"}, apiConfig.PostPlanHandler))
 	apiRoute.Post("/plans/subpage", apiConfig.RoleMiddleware([]string{"admin"}, apiConfig.PostPlanSubPageHandler))
 
-	apiRoute.Get("/plans", apiConfig.AuthMiddleware(apiConfig.GetPlansHandler))
+	apiRoute.Get("/plans", apiConfig.GetPlansHandler)
 
 	apiRoute.Post("/subscribe", apiConfig.AuthMiddleware(apiConfig.PostSubscribe))
 	apiRoute.Get("/subscription/me", apiConfig.AuthMiddleware(apiConfig.HandleGetMySubscription))
@@ -81,6 +81,10 @@ func server(apiConfig *handlers.Config) {
 	apiRoute.Post("/user-professions", apiConfig.AuthMiddleware(apiConfig.PostUserProfessionsHandler))
 	apiRoute.Get("/user-professions", apiConfig.AuthMiddleware(apiConfig.GetUserProfessionsHandler))
 	apiRoute.Delete("/user-professions", apiConfig.AuthMiddleware(apiConfig.DeleteUserProfessionHandler))
+
+	//  contacts
+	apiRoute.Get("/contact-departments", apiConfig.GetContactDepartmentsHandler)
+	apiRoute.Post("/contact", apiConfig.ContactRateLimiter(apiConfig.PostContactMessagesHandler))
 
 	apiRoute.Get("/results/{sessionID}", apiConfig.GetResultHandler)
 	router.Mount("/api", apiRoute)
