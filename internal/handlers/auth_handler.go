@@ -311,41 +311,55 @@ func (cfg *Config) PasswordChangeHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (cfg *Config) GetUserHandler(w http.ResponseWriter, r *http.Request, user User) {
-
-	// 1. Default display name is the email prefix (fallback)
-	displayName := strings.Split(user.Email, "@")[0]
+	res := struct {
+		User
+		// CompanyName     string `json:"company_name"`
+		// CompanyIndustry string `json:"company_industry"`
+		// CompanyWebsite  string `json:"company_website"`
+		// CompanySize     int    `json:"company_size"`
+		// FirstName       string `json:"first_name"`
+		// LastName        string `json:"last_name"`
+		// ResumeUrl       string `json:"resume_url"`
+		EmployerProfile
+		JobSeekerProfile
+	}{
+		User: user,
+	}
 
 	switch user.Role {
 	case "job_seeker":
 		profile, err := cfg.DB.GetJobSeekerProfileByUserID(r.Context(), user.ID)
 		if err == nil {
-			displayName = profile.FirstName
+			res.FirstName = profile.FirstName
+			res.LastName = profile.FirstName
+			res.ResumeUrl = profile.ResumeUrl.String
 		}
 	case "employer":
 		profile, err := cfg.DB.GetEmployerProfileByUserID(r.Context(), user.ID)
 		if err == nil {
-			displayName = profile.CompanyName
+			res.CompanyIndustry = profile.CompanyIndustry
+			res.CompanyName = profile.CompanyName
+			res.CompanyWebsite = profile.CompanyWebsite
+			res.CompanySize = int(profile.CompanySize)
 		}
 	case "admin":
 		// Try Job Seeker first
-		jsProfile, err := cfg.DB.GetJobSeekerProfileByUserID(r.Context(), user.ID)
+		profile, err := cfg.DB.GetJobSeekerProfileByUserID(r.Context(), user.ID)
 		if err == nil {
-			displayName = jsProfile.FirstName
+			res.FirstName = profile.FirstName
+			res.LastName = profile.FirstName
+			res.ResumeUrl = profile.ResumeUrl.String
 			break // Stop here if found
 		}
 
 		// Fallback to Employer check
 		empProfile, err := cfg.DB.GetEmployerProfileByUserID(r.Context(), user.ID)
 		if err == nil {
-			displayName = empProfile.CompanyName
+			res.CompanyIndustry = empProfile.CompanyIndustry
+			res.CompanyName = empProfile.CompanyName
+			res.CompanyWebsite = empProfile.CompanyWebsite
+			res.CompanySize = int(empProfile.CompanySize)
 		}
-	}
-	res := struct {
-		User
-		DisplayName string `json:"display_name"`
-	}{
-		User:        user,
-		DisplayName: displayName,
 	}
 
 	// 3. Respond with the new field
