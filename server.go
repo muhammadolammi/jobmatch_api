@@ -55,6 +55,7 @@ func server(apiConfig *handlers.Config) {
 	apiRoute.Post("/sessions/{id}/presign", apiConfig.AuthMiddleware(apiConfig.PresignUploadHandler))
 	apiRoute.Get("/sessions", apiConfig.AuthMiddleware(apiConfig.GetSessions))
 	apiRoute.Get("/sessions/{id}", apiConfig.AuthMiddleware(apiConfig.GetSession))
+	apiRoute.Delete("/sessions/{id}", apiConfig.AuthMiddleware(apiConfig.DeleteSession))
 
 	apiRoute.Get("/sessions/sse/{id}/updates", apiConfig.AuthMiddleware(apiConfig.HandleSessionUpdates))
 

@@ -1,14 +1,15 @@
 name: Build and Deploy
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - main  
+      - main
 
 env:
-  PROJECT_ID: 'n3xtbridge' 
-  REGION: 'us-east1'               
-  SERVICE: 'jobmatch-backend'          
+  PROJECT_ID: "n3xtbridge"
+  REGION: "us-east1"
+  SERVICE: "jobmatch-backend"
 
 permissions:
   contents: read
@@ -50,20 +51,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - id: 'auth'
-        name: 'Authenticate to Google Cloud'
-        uses: 'google-github-actions/auth@v2'
+      - id: "auth"
+        name: "Authenticate to Google Cloud"
+        uses: "google-github-actions/auth@v2"
         with:
-          workload_identity_provider: '${{ secrets.WIF_PROVIDER }}'
-          service_account: '${{ secrets.WIF_SERVICE_ACCOUNT }}'
+          workload_identity_provider: "${{ secrets.WIF_PROVIDER }}"
+          service_account: "${{ secrets.WIF_SERVICE_ACCOUNT }}"
 
-      - name: 'Deploy to Cloud Run'
-        uses: 'google-github-actions/deploy-cloudrun@v2'
+      - name: "Deploy to Cloud Run"
+        uses: "google-github-actions/deploy-cloudrun@v2"
         with:
-          service: '${{ env.SERVICE }}'
-          region: '${{ env.REGION }}'
-          project_id: '${{ env.PROJECT_ID }}'
-          image: 'index.docker.io/muhammadolammi/jobmatch-backend:latest'
+          service: "${{ env.SERVICE }}"
+          region: "${{ env.REGION }}"
+          project_id: "${{ env.PROJECT_ID }}"
+          image: "index.docker.io/muhammadolammi/jobmatch-backend:latest"
           env_vars: |
             ENV=${{ secrets.ENV }}
             PROJECT_ID=${{ env.PROJECT_ID }}

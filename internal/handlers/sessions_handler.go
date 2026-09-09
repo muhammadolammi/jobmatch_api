@@ -67,6 +67,37 @@ func (cfg *Config) GetSessions(w http.ResponseWriter, r *http.Request, user User
 	helpers.RespondWithJson(w, http.StatusOK, DbSessionsToModelSessions(sessions))
 }
 
+func (cfg *Config) DeleteSession(w http.ResponseWriter, r *http.Request, user User) {
+	session := chi.URLParam(r, "id")
+	if session == "" {
+		helpers.RespondWithError(w, http.StatusInternalServerError, "session id can't be empty")
+		return
+
+	}
+	sessionID, err := uuid.Parse(session)
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusBadRequest, "error parsing session")
+		return
+
+	}
+	dbsession, err := cfg.DB.GetSession(r.Context(), sessionID)
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusBadRequest, "error confirming session")
+		return
+	}
+	if dbsession.UserID != user.ID {
+		helpers.RespondWithError(w, http.StatusUnauthorized, "unauthorized action")
+		return
+	}
+	err = cfg.DB.DeleteSession(r.Context(), sessionID)
+	if err != nil {
+		helpers.RespondWithError(w, http.StatusInternalServerError, "error deleting session")
+		return
+
+	}
+
+}
+
 func (cfg *Config) HandleSessionUpdates(w http.ResponseWriter, r *http.Request, user User) {
 	sessionID := chi.URLParam(r, "id")
 
@@ -147,10 +178,16 @@ func (cfg *Config) HandleSessionUpdates(w http.ResponseWriter, r *http.Request, 
 			fmt.Fprintf(w, ":keep-alive\n\n")
 			flusher.Flush()
 		case d := <-msgs:
-			// log.Println(string(d.Body))
+			// TODO solve when this bod is empty
+			log.Println(string(d.Body))
 			fmt.Fprintf(w, "data: %s\n\n", d.Body)
+
 			flusher.Flush()
 			if strings.Contains(string(d.Body), "completed") {
+				return
+			}
+			if string(d.Body) == "" {
+				log.Println("empty message returning")
 				return
 			}
 		}

@@ -40,18 +40,18 @@ type Config struct {
 
 type EmployerProfile struct {
 	ID              uuid.UUID
-	CompanyName     string
-	CompanyWebsite  string
-	CompanySize     int32
-	CompanyIndustry string
+	CompanyName     string `json:"company_name"`
+	CompanyIndustry string `json:"company_industry"`
+	CompanyWebsite  string `json:"company_website"`
+	CompanySize     int    `json:"company_size"`
 	UserID          uuid.UUID
 }
 
 type JobSeekerProfile struct {
 	ID        uuid.UUID
-	FirstName string
-	LastName  string
-	ResumeUrl sql.NullString
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	ResumeUrl string `json:"resume_url"`
 	UserID    uuid.UUID
 }
 
@@ -72,11 +72,10 @@ type Resume struct {
 }
 
 type User struct {
-	ID          uuid.UUID `json:"id"`
-	Email       string    `json:"email"`
-	Role        string    `json:"role"`
-	CreatedAt   time.Time `json:"created_at"`
-	DisplayName string    `json:"display_name"`
+	ID        uuid.UUID `json:"id"`
+	Email     string    `json:"email"`
+	Role      string    `json:"role"`
+	CreatedAt time.Time `json:"created_at"`
 }
 type Session struct {
 	ID             uuid.UUID `json:"id"`
@@ -177,4 +176,13 @@ type PostContactMessageBody struct {
 	Email        string `json:"email"`
 	Message      string `json:"message"`
 	DepartmentId string `json:"department_id"`
+}
+
+type JobPost struct {
+	ID          uuid.UUID `json:"id"`
+	EmployerID  uuid.UUID `json:"employer_id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }

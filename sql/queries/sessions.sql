@@ -17,3 +17,7 @@ WHERE id = $1;
 UPDATE sessions 
 SET status=$1
 WHERE id=$2;
+
+-- name: DeleteSession :exec 
+DELETE  FROM sessions 
+WHERE id = $1;
