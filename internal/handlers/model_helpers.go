@@ -166,3 +166,25 @@ func DbContactDepartmentsToModelContactDepartments(dbContactDepartments []databa
 	}
 	return contactDepartments
 }
+
+// JobPost model helpers
+func DbJobPostToModelJobPost(dbJobPost database.JobPost) JobPost {
+	return JobPost{
+		ID: dbJobPost.ID,
+
+		CreatedAt: dbJobPost.CreatedAt,
+		UpdatedAt: dbJobPost.UpdatedAt,
+
+		Title:       dbJobPost.Title,
+		Description: dbJobPost.Description,
+	}
+
+}
+
+func DbJobPostsToModelJobPosts(dbJobPosts []database.JobPost) []JobPost {
+	jobPosts := []JobPost{}
+	for _, dbSession := range dbJobPosts {
+		jobPosts = append(jobPosts, DbJobPostToModelJobPost(dbSession))
+	}
+	return jobPosts
+}

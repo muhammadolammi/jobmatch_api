@@ -177,3 +177,12 @@ type PostContactMessageBody struct {
 	Message      string `json:"message"`
 	DepartmentId string `json:"department_id"`
 }
+
+type JobPost struct {
+	ID          uuid.UUID `json:"id"`
+	EmployerID  uuid.UUID `json:"employer_id"`
+	Title       string    `json:"title"`
+	Description string    `json:"description"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}

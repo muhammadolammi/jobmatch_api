@@ -230,6 +230,8 @@ func (cfg *Config) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error creating refresh token. err: %v", err))
 		return
 	}
+	// create access token
+
 	access_token, err := auth.MakeJwtTokenString([]byte(cfg.JwtKey), user.ID.String(), "access_token", cfg.AcessTokenEXpirationTime)
 	if err != nil {
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error creating access token. err: %v", err))

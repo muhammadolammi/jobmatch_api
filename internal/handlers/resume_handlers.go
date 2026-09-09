@@ -27,7 +27,9 @@ func (cfg *Config) AnalyzeHandler(w http.ResponseWriter, r *http.Request, user U
 	}{}
 	encoder := json.NewDecoder(r.Body)
 	err := encoder.Decode(&body)
+
 	if err != nil {
+		log.Println("analyze final error: ", err)
 		helpers.RespondWithError(w, http.StatusInternalServerError, "error decoding request body. err: "+err.Error())
 		return
 	}
@@ -37,11 +39,15 @@ func (cfg *Config) AnalyzeHandler(w http.ResponseWriter, r *http.Request, user U
 	}
 	sessionUUid, err := uuid.Parse(body.SessionID)
 	if err != nil {
+		log.Println("analyze final error: ", err)
+
 		helpers.RespondWithError(w, http.StatusInternalServerError, "error parsing uuid. err: "+err.Error())
 		return
 	}
 	session, err := cfg.DB.GetSession(r.Context(), sessionUUid)
 	if err != nil {
+		log.Println("analyze final error: ", err)
+
 		helpers.RespondWithError(w, http.StatusInternalServerError, "error getting session from db. err: "+err.Error())
 		return
 	}
@@ -51,6 +57,8 @@ func (cfg *Config) AnalyzeHandler(w http.ResponseWriter, r *http.Request, user U
 		Status: "pending",
 	})
 	if err != nil {
+		log.Println("analyze final error: ", err)
+
 		helpers.RespondWithError(w, http.StatusInternalServerError, "error updating session status to pending(db error). err: "+err.Error())
 		return
 	}
@@ -58,6 +66,8 @@ func (cfg *Config) AnalyzeHandler(w http.ResponseWriter, r *http.Request, user U
 	// publish the session
 	err = cfg.PublishSession(DbSessionToModelSession(session))
 	if err != nil {
+		log.Println("analyze final error: ", err)
+
 		helpers.RespondWithError(w, http.StatusInternalServerError, "error queing session. err: "+err.Error())
 		return
 	}
@@ -124,6 +134,8 @@ func (cfg *Config) UploadCompleteHandler(w http.ResponseWriter, r *http.Request,
 		StorageUrl string `json:"storage_url"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		log.Println("uplpad resume complete final error: ", err)
+
 		helpers.RespondWithError(w, http.StatusBadRequest, "invalid body")
 		return
 	}
@@ -150,6 +162,8 @@ func (cfg *Config) UploadCompleteHandler(w http.ResponseWriter, r *http.Request,
 
 	sessionUUid, err := uuid.Parse(body.SessionID)
 	if err != nil {
+		log.Println("uplpad resume complete final error: ", err)
+
 		helpers.RespondWithError(w, http.StatusInternalServerError, fmt.Sprintf("error parsing uuid. err: %v", err))
 		return
 	}
@@ -166,6 +180,8 @@ func (cfg *Config) UploadCompleteHandler(w http.ResponseWriter, r *http.Request,
 			UploadStatus:     "uploaded",
 		})
 		if err != nil {
+			log.Println("uplpad resume complete final error: ", err)
+
 			helpers.RespondWithError(w, http.StatusInternalServerError, "db err: "+err.Error())
 			log.Println(err)
 			return
@@ -186,6 +202,8 @@ func (cfg *Config) UploadCompleteHandler(w http.ResponseWriter, r *http.Request,
 		UploadStatus:     "uploaded",
 	})
 	if err != nil {
+		log.Println("uplpad resume complete final error: ", err)
+
 		helpers.RespondWithError(w, http.StatusInternalServerError, "db err: "+err.Error())
 		log.Println(err)
 		return

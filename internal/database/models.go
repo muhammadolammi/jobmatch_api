@@ -44,6 +44,15 @@ type EmployerProfile struct {
 	UserID          uuid.UUID
 }
 
+type JobPost struct {
+	ID          uuid.UUID
+	EmployerID  uuid.UUID
+	Title       string
+	Description string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
 type JobSeekerProfile struct {
 	ID        uuid.UUID
 	FirstName string
